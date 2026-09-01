@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSMS — Customers</title>
+  <link rel="stylesheet" href="/assets/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="sidebar">
+    <a href="/admin/dashboard.html" class="sidebar-logo"><div class="sidebar-logo-icon">🧺</div><div><div class="sidebar-logo-text">LSMS</div><div class="sidebar-logo-sub">Admin Panel</div></div></a>
+    <div class="sidebar-section-label">Overview</div>
+    <a href="/admin/dashboard.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+    <div class="sidebar-section-label">Operations</div>
+    <a href="/admin/customers.html" class="nav-item active"><span class="nav-icon">👥</span> Customers</a>
+    <a href="/admin/orders.html" class="nav-item"><span class="nav-icon">📦</span> Orders</a>
+    <a href="/admin/services.html" class="nav-item"><span class="nav-icon">🧼</span> Services</a>
+    <div class="sidebar-section-label">Finance</div>
+    <a href="/admin/payments.html" class="nav-item"><span class="nav-icon">💳</span> Billing &amp; Payments</a>
+    <div class="sidebar-section-label">Logistics</div>
+    <a href="/admin/inventory.html" class="nav-item"><span class="nav-icon">🗃️</span> Inventory</a>
+    <a href="/admin/delivery.html" class="nav-item"><span class="nav-icon">🚚</span> Delivery</a>
+    <div class="sidebar-section-label">Insights</div>
+    <a href="/admin/reports.html" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
+    <div class="sidebar-footer"><div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">A</div><div><div class="sidebar-user-name" id="sidebar-user-name">Admin</div><div class="sidebar-user-role" id="sidebar-user-role">admin</div></div><button onclick="logout()" title="Logout" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">🚪</button></div></div>
+  </nav>
+
+  <div class="main-content">
+    <header class="topbar"><div class="topbar-title">Customers</div></header>
+    <main class="page-content">
+      <div class="page-header">
+        <div class="page-header-left"><h2>Customer Management</h2><p>View and manage all registered customers</p></div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="search-input" placeholder="Search by name, phone or email…"/></div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrapper">
+          <table class="table" id="customers-table">
+            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Joined</th><th>Actions</th></tr></thead>
+            <tbody id="customers-tbody"><tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div> Loading…</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Edit Customer</div><button class="modal-close" onclick="closeModal('edit-modal')">✕</button></div>
+    <form id="edit-form">
+      <input type="hidden" id="edit-id"/>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">First Name</label><input id="edit-first" class="form-control" required/></div>
+        <div class="form-group"><label class="form-label">Last Name</label><input id="edit-last" class="form-control" required/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Phone</label><input id="edit-phone" class="form-control" required/></div>
+      <div class="form-group"><label class="form-label">Address</label><textarea id="edit-address" class="form-control" required></textarea></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('edit-modal')">Cancel</button>
+        <button type="submit" id="edit-save-btn" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Orders Modal -->
+<div class="modal-overlay" id="orders-modal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header"><div class="modal-title" id="orders-modal-title">Order History</div><button class="modal-close" onclick="closeModal('orders-modal')">✕</button></div>
+    <div class="table-wrapper"><table class="table"><thead><tr><th>Order #</th><th>Date</th><th>Status</th><th>Cost</th><th>Bill Status</th></tr></thead><tbody id="orders-modal-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script>
+requireAuth(['admin','staff']);
+populateSidebarUser();
+
+let customers = [];
+
+async function loadCustomers(q = '') {
+  const tbody = document.getElementById('customers-tbody');
+  tbody.innerHTML = '<tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
+  try {
+    const res = await api.getCustomers(q);
+    customers = res.data;
+    renderTable(customers);
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+function renderTable(data) {
+  const tbody = document.getElementById('customers-tbody');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">👥</div><h3>No customers found</h3></div></td></tr>'; return; }
+  tbody.innerHTML = data.map(c => `
+    <tr>
+      <td><strong>#${c.CustomerID}</strong></td>
+      <td><strong>${c.FirstName} ${c.LastName}</strong></td>
+      <td>${c.Email}</td>
+      <td>${c.Phone}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.Address}">${c.Address}</td>
+      <td>${fmt.date(c.CreatedAt)}</td>
+      <td>
+        <div style="display:flex;gap:0.4rem">
+          <button class="btn btn-icon" title="View Orders" onclick="viewOrders(${c.CustomerID},'${c.FirstName} ${c.LastName}')">📋</button>
+          <button class="btn btn-icon" title="Edit" onclick="editCustomer(${c.CustomerID})">✏️</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function editCustomer(id) {
+  const c = customers.find(x => x.CustomerID === id);
+  if (!c) return;
+  document.getElementById('edit-id').value = id;
+  document.getElementById('edit-first').value = c.FirstName;
+  document.getElementById('edit-last').value = c.LastName;
+  document.getElementById('edit-phone').value = c.Phone;
+  document.getElementById('edit-address').value = c.Address;
+  openModal('edit-modal');
+}
+
+document.getElementById('edit-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('edit-id').value;
+  setLoading('edit-save-btn', true);
+  try {
+    await api.updateCustomer(id, {
+      firstName: document.getElementById('edit-first').value,
+      lastName:  document.getElementById('edit-last').value,
+      phone:     document.getElementById('edit-phone').value,
+      address:   document.getElementById('edit-address').value,
+    });
+    showToast('Customer updated!', 'success');
+    closeModal('edit-modal');
+    loadCustomers();
+  } catch (err) { showToast(err.message, 'error'); }
+  setLoading('edit-save-btn', false, 'Save Changes');
+});
+
+async function viewOrders(id, name) {
+  document.getElementById('orders-modal-title').textContent = `Orders — ${name}`;
+  document.getElementById('orders-modal-tbody').innerHTML = '<tr><td colspan="5"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
+  openModal('orders-modal');
+  try {
+    const res = await api.getCustomerOrders(id);
+    const tbody = document.getElementById('orders-modal-tbody');
+    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding:2rem">No orders yet.</td></tr>'; return; }
+    tbody.innerHTML = res.data.map(o => `
+      <tr>
+        <td><strong>#${o.OrderID}</strong></td>
+        <td>${fmt.date(o.OrderDate)}</td>
+        <td>${statusBadge(o.Status)}</td>
+        <td>${fmt.currency(o.TotalCost)}</td>
+        <td>${o.BillStatus ? statusBadge(o.BillStatus) : '<span class="text-muted">—</span>'}</td>
+      </tr>
+    `).join('');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+let searchTimeout;
+document.getElementById('search-input').addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => loadCustomers(e.target.value.trim()), 350);
+});
+
+loadCustomers();
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSMS — Register | Create Account</title>
+  <meta name="description" content="Create your LSMS customer account"/>
+  <link rel="stylesheet" href="/assets/css/styles.css"/>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card" style="max-width:520px">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🧺</div>
+      <div><h1>LSMS</h1><span>Create Customer Account</span></div>
+    </div>
+
+    <h2 class="auth-title">Create your account</h2>
+    <p class="auth-subtitle">Join us for professional laundry services</p>
+
+    <form id="register-form" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="firstName">First Name</label>
+          <input id="firstName" type="text" class="form-control" placeholder="Aarav" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="lastName">Last Name</label>
+          <input id="lastName" type="text" class="form-control" placeholder="Sharma" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input id="email" type="email" class="form-control" placeholder="you@example.com" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="phone">Phone Number</label>
+        <input id="phone" type="tel" class="form-control" placeholder="9876543210" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="address">Address</label>
+        <textarea id="address" class="form-control" placeholder="12, MG Road, Pune, Maharashtra 411001" required style="min-height:70px"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input id="password" type="password" class="form-control" placeholder="Minimum 6 characters" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="confirmPassword">Confirm Password</label>
+        <input id="confirmPassword" type="password" class="form-control" placeholder="Re-enter password" required/>
+      </div>
+
+      <div id="reg-error" class="form-error hidden" style="margin-bottom:1rem;"></div>
+
+      <button id="reg-btn" type="submit" class="btn btn-primary btn-full btn-lg">Create Account</button>
+    </form>
+
+    <p style="text-align:center;margin-top:1.5rem;font-size:0.875rem;color:var(--text-muted)">
+      Already have an account?
+      <a href="/index.html" style="color:var(--primary-light);font-weight:600">Sign in</a>
+    </p>
+  </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script>
+  document.getElementById('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('reg-error');
+    errEl.classList.add('hidden');
+
+    const pwd   = document.getElementById('password').value;
+    const cpwd  = document.getElementById('confirmPassword').value;
+
+    if (pwd !== cpwd) {
+      errEl.textContent = 'Passwords do not match.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    if (pwd.length < 6) {
+      errEl.textContent = 'Password must be at least 6 characters.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    setLoading('reg-btn', true, 'Create Account');
+    try {
+      const data = await api.register({
+        firstName: document.getElementById('firstName').value.trim(),
+        lastName:  document.getElementById('lastName').value.trim(),
+        email:     document.getElementById('email').value.trim(),
+        phone:     document.getElementById('phone').value.trim(),
+        address:   document.getElementById('address').value.trim(),
+        password:  pwd,
+      });
+      Auth.setSession(data.token, data.user);
+      showToast('Account created! Redirecting…', 'success');
+      setTimeout(() => window.location.href = '/customer/dashboard.html', 1200);
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.remove('hidden');
+      setLoading('reg-btn', false, 'Create Account');
+    }
+  });
+</script>
+</body>
+</html>

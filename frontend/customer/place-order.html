@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSMS — Place New Order</title>
+  <link rel="stylesheet" href="/assets/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="sidebar">
+    <a href="/customer/dashboard.html" class="sidebar-logo"><div class="sidebar-logo-icon">🧺</div><div><div class="sidebar-logo-text">LSMS</div><div class="sidebar-logo-sub">Customer Portal</div></div></a>
+    <div class="sidebar-section-label">My Account</div>
+    <a href="/customer/dashboard.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="/customer/place-order.html" class="nav-item active"><span class="nav-icon">➕</span> Place New Order</a>
+    <a href="/customer/orders.html" class="nav-item"><span class="nav-icon">📦</span> My Orders</a>
+    <a href="/customer/feedback.html" class="nav-item"><span class="nav-icon">⭐</span> Feedback</a>
+    <div class="sidebar-footer"><div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">C</div><div><div class="sidebar-user-name" id="sidebar-user-name">Customer</div><div class="sidebar-user-role" id="sidebar-user-role">customer</div></div><button onclick="logout()" title="Logout" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">🚪</button></div></div>
+  </nav>
+  <div class="main-content">
+    <header class="topbar"><div class="topbar-title">Place New Order</div></header>
+    <main class="page-content">
+      <div class="page-header"><div class="page-header-left"><h2>Place a New Order</h2><p>Select services, add garment details, and submit your order</p></div></div>
+
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:1.5rem;align-items:start">
+        <!-- Left: Order Form -->
+        <div>
+          <!-- Service selection -->
+          <div class="card" style="margin-bottom:1.25rem">
+            <div class="card-header"><div class="card-title">1. Add Garment Items</div></div>
+            <div id="services-loading" class="loading-overlay"><div class="spinner"></div> Loading services…</div>
+            <div id="item-form-area" class="hidden">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Select Service</label>
+                  <select id="item-service" class="form-control" onchange="updatePrice()">
+                    <option value="">— Choose service —</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Garment Type</label>
+                  <input id="item-garment" class="form-control" placeholder="e.g. Shirts, Trousers, Sarees"/>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Quantity (pieces)</label>
+                  <input id="item-qty" type="number" min="1" class="form-control" value="1" oninput="updatePrice()"/>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Weight (kg)</label>
+                  <input id="item-weight" type="number" min="0.1" step="0.1" class="form-control" value="1.0" oninput="updatePrice()"/>
+                </div>
+              </div>
+              <div id="item-cost-preview" style="padding:0.75rem;background:var(--bg-card);border-radius:var(--radius-sm);margin-bottom:1rem;font-size:0.875rem;color:var(--text-secondary)">
+                Select a service to see cost preview
+              </div>
+              <button type="button" class="btn btn-primary btn-sm" onclick="addItem()">+ Add Item to Order</button>
+            </div>
+          </div>
+
+          <!-- Items list -->
+          <div class="card" style="margin-bottom:1.25rem">
+            <div class="card-header"><div class="card-title">2. Order Items</div></div>
+            <div id="items-list"><div class="empty-state" style="padding:1.5rem"><p>No items added yet.</p></div></div>
+          </div>
+
+          <!-- Pickup & Notes -->
+          <div class="card">
+            <div class="card-header"><div class="card-title">3. Pickup &amp; Notes</div></div>
+            <div class="form-group">
+              <label class="form-label">Preferred Pickup Date</label>
+              <input id="pickup-date" type="date" class="form-control"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Special Instructions (optional)</label>
+              <textarea id="order-notes" class="form-control" placeholder="e.g. Handle silk items with care…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Order Summary -->
+        <div class="card" style="position:sticky;top:calc(var(--topbar-h) + 1.5rem)">
+          <div class="card-title" style="margin-bottom:1.25rem">🧾 Order Summary</div>
+          <div id="summary-items" style="margin-bottom:1rem"></div>
+          <div style="border-top:1px solid var(--border);padding-top:1rem">
+            <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;font-size:0.875rem">
+              <span class="text-muted">Total Weight</span>
+              <span id="summary-weight" class="fw-600">0.00 kg</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:1.1rem;font-weight:700;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+              <span>Estimated Total</span>
+              <span id="summary-total" class="text-success">₹0.00</span>
+            </div>
+            <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem">⚠️ Final cost is calculated by the server based on actual weight.</p>
+          </div>
+          <button id="place-order-btn" class="btn btn-primary btn-full btn-lg" style="margin-top:1.5rem" onclick="placeOrder()">
+            🧺 Place Order
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script>
+if (!requireAuth(['customer'])) {}
+populateSidebarUser();
+
+const user = Auth.getUser();
+let services = [], orderItems = [];
+
+async function loadServices() {
+  try {
+    const res = await api.getServices(true);
+    services = res.data;
+    const sel = document.getElementById('item-service');
+    sel.innerHTML = '<option value="">— Choose service —</option>' +
+      services.map(s => `<option value="${s.ServiceID}" data-price="${s.PricePerKg}">${s.ServiceName} — ${fmt.currency(s.PricePerKg)}/kg</option>`).join('');
+    document.getElementById('services-loading').classList.add('hidden');
+    document.getElementById('item-form-area').classList.remove('hidden');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+function updatePrice() {
+  const sel    = document.getElementById('item-service');
+  const opt    = sel.options[sel.selectedIndex];
+  const price  = parseFloat(opt?.dataset?.price || 0);
+  const weight = parseFloat(document.getElementById('item-weight').value || 0);
+  const cost   = price * weight;
+  const preview = document.getElementById('item-cost-preview');
+  if (price && weight) {
+    preview.innerHTML = `<strong>${fmt.currency(price)}/kg × ${weight}kg = <span style="color:var(--success)">${fmt.currency(cost)}</span></strong>`;
+    preview.style.borderLeft = '3px solid var(--success)';
+  } else {
+    preview.innerHTML = 'Select a service to see cost preview';
+    preview.style.borderLeft = '';
+  }
+}
+
+function addItem() {
+  const serviceID  = document.getElementById('item-service').value;
+  const garment    = document.getElementById('item-garment').value.trim();
+  const qty        = parseInt(document.getElementById('item-qty').value);
+  const weight     = parseFloat(document.getElementById('item-weight').value);
+
+  if (!serviceID) { showToast('Please select a service.', 'warning'); return; }
+  if (!garment)   { showToast('Please enter garment type.', 'warning'); return; }
+  if (!qty || qty <= 0)    { showToast('Quantity must be at least 1.', 'warning'); return; }
+  if (!weight || weight <= 0) { showToast('Weight must be positive.', 'warning'); return; }
+
+  const svc  = services.find(s => s.ServiceID == serviceID);
+  const cost = weight * parseFloat(svc.PricePerKg);
+  orderItems.push({ serviceID: parseInt(serviceID), serviceName: svc.ServiceName, pricePerKg: svc.PricePerKg, garmentType: garment, quantity: qty, weightKg: weight, serviceCost: cost });
+
+  renderItems();
+  // Reset input
+  document.getElementById('item-service').value = '';
+  document.getElementById('item-garment').value = '';
+  document.getElementById('item-qty').value = '1';
+  document.getElementById('item-weight').value = '1.0';
+  updatePrice();
+  showToast('Item added!', 'success');
+}
+
+function removeItem(idx) {
+  orderItems.splice(idx, 1);
+  renderItems();
+}
+
+function renderItems() {
+  const el = document.getElementById('items-list');
+  if (!orderItems.length) { el.innerHTML = '<div class="empty-state" style="padding:1.5rem"><p>No items added yet.</p></div>'; updateSummary(); return; }
+  el.innerHTML = orderItems.map((item, i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600">${item.garmentType} <span style="font-weight:400;color:var(--text-muted)">× ${item.quantity}</span></div>
+        <div style="font-size:0.78rem;color:var(--text-muted)">${item.serviceName} · ${item.weightKg}kg</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <span style="font-weight:600;color:var(--success)">${fmt.currency(item.serviceCost)}</span>
+        <button class="btn-icon" onclick="removeItem(${i})" style="color:var(--danger);font-size:1rem;background:none;border:none;cursor:pointer">✕</button>
+      </div>
+    </div>
+  `).join('');
+  updateSummary();
+}
+
+function updateSummary() {
+  const totalWeight = orderItems.reduce((s, i) => s + i.weightKg, 0);
+  const totalCost   = orderItems.reduce((s, i) => s + i.serviceCost, 0);
+  document.getElementById('summary-weight').textContent = fmt.weight(totalWeight);
+  document.getElementById('summary-total').textContent  = fmt.currency(totalCost);
+
+  const summaryItems = document.getElementById('summary-items');
+  summaryItems.innerHTML = orderItems.length
+    ? orderItems.map(i => `<div style="display:flex;justify-content:space-between;font-size:0.85rem;padding:0.3rem 0"><span>${i.garmentType} (${i.serviceName})</span><span>${fmt.currency(i.serviceCost)}</span></div>`).join('')
+    : '<p style="color:var(--text-muted);font-size:0.875rem">Add items to see summary</p>';
+}
+
+async function placeOrder() {
+  if (!orderItems.length) { showToast('Please add at least one item.', 'warning'); return; }
+  const body = {
+    customerID: user.customerID,
+    pickupDate: document.getElementById('pickup-date').value || null,
+    notes:      document.getElementById('order-notes').value || null,
+    details: orderItems.map(i => ({
+      serviceID:   i.serviceID,
+      garmentType: i.garmentType,
+      quantity:    i.quantity,
+      weightKg:    i.weightKg,
+    })),
+  };
+  setLoading('place-order-btn', true, '🧺 Place Order');
+  try {
+    const res = await api.createOrder(body);
+    showToast(`Order #${res.orderID} placed! Total: ${fmt.currency(res.totalCost)}`, 'success');
+    setTimeout(() => window.location.href = '/customer/orders.html', 1500);
+  } catch (err) { showToast(err.message, 'error'); setLoading('place-order-btn', false, '🧺 Place Order'); }
+}
+
+// Set min date for pickup
+document.getElementById('pickup-date').min = new Date().toISOString().split('T')[0];
+
+loadServices();
+</script>
+</body>
+</html>

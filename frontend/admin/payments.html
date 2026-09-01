@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSMS — Billing &amp; Payments</title>
+  <link rel="stylesheet" href="/assets/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="sidebar">
+    <a href="/admin/dashboard.html" class="sidebar-logo"><div class="sidebar-logo-icon">🧺</div><div><div class="sidebar-logo-text">LSMS</div><div class="sidebar-logo-sub">Admin Panel</div></div></a>
+    <div class="sidebar-section-label">Overview</div><a href="/admin/dashboard.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+    <div class="sidebar-section-label">Operations</div>
+    <a href="/admin/customers.html" class="nav-item"><span class="nav-icon">👥</span> Customers</a>
+    <a href="/admin/orders.html" class="nav-item"><span class="nav-icon">📦</span> Orders</a>
+    <a href="/admin/services.html" class="nav-item"><span class="nav-icon">🧼</span> Services</a>
+    <div class="sidebar-section-label">Finance</div>
+    <a href="/admin/payments.html" class="nav-item active"><span class="nav-icon">💳</span> Billing &amp; Payments</a>
+    <div class="sidebar-section-label">Logistics</div>
+    <a href="/admin/inventory.html" class="nav-item"><span class="nav-icon">🗃️</span> Inventory</a>
+    <a href="/admin/delivery.html" class="nav-item"><span class="nav-icon">🚚</span> Delivery</a>
+    <div class="sidebar-section-label">Insights</div><a href="/admin/reports.html" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
+    <div class="sidebar-footer"><div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">A</div><div><div class="sidebar-user-name" id="sidebar-user-name">Admin</div><div class="sidebar-user-role" id="sidebar-user-role">admin</div></div><button onclick="logout()" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">🚪</button></div></div>
+  </nav>
+  <div class="main-content">
+    <header class="topbar"><div class="topbar-title">Billing &amp; Payments</div></header>
+    <main class="page-content">
+      <div class="page-header"><div class="page-header-left"><h2>Billing &amp; Payments</h2><p>Manage invoices and record payments</p></div></div>
+
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-bills" onclick="switchTab('bills')">🧾 All Bills</button>
+        <button class="tab-btn" id="tab-payments" onclick="switchTab('payments')">💳 Payments</button>
+        <button class="tab-btn" id="tab-outstanding" onclick="switchTab('outstanding')">⚠️ Outstanding</button>
+      </div>
+
+      <!-- Bills -->
+      <div id="panel-bills">
+        <div class="card">
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th>Bill #</th><th>Order #</th><th>Customer</th><th>Bill Date</th><th>Due Date</th><th>Amount</th><th>Paid</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="bills-tbody"><tr><td colspan="9"><div class="loading-overlay"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payments -->
+      <div id="panel-payments" class="hidden">
+        <div class="card">
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th>Pay #</th><th>Bill #</th><th>Order #</th><th>Customer</th><th>Date</th><th>Amount</th><th>Method</th><th>Txn ID</th></tr></thead>
+              <tbody id="payments-tbody"><tr><td colspan="8"><div class="loading-overlay"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Outstanding -->
+      <div id="panel-outstanding" class="hidden">
+        <div class="card">
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th>Bill #</th><th>Order #</th><th>Customer</th><th>Due Date</th><th>Total</th><th>Paid</th><th>Balance</th><th>Age</th><th>Action</th></tr></thead>
+              <tbody id="outstanding-tbody"><tr><td colspan="9"><div class="loading-overlay"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Record Payment Modal -->
+<div class="modal-overlay" id="payment-modal">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header"><div class="modal-title">Record Payment — Bill #<span id="pay-bill-label"></span></div><button class="modal-close" onclick="closeModal('payment-modal')">✕</button></div>
+    <input type="hidden" id="pay-bill-id"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem;padding:1rem;background:var(--bg-card);border-radius:var(--radius-sm);font-size:0.85rem">
+      <div><span class="text-muted">Total Amount:</span> <span id="pay-total" class="fw-600"></span></div>
+      <div><span class="text-muted">Already Paid:</span> <span id="pay-paid" class="fw-600"></span></div>
+      <div style="grid-column:span 2"><span class="text-muted">Balance Due:</span> <span id="pay-balance" class="fw-600 text-warning"></span></div>
+    </div>
+    <div class="form-group"><label class="form-label">Amount to Pay (₹)</label><input id="pay-amount" type="number" min="0.01" step="0.01" class="form-control" required/></div>
+    <div class="form-group">
+      <label class="form-label">Payment Method</label>
+      <select id="pay-method" class="form-control">
+        <option>Cash</option><option>UPI</option><option>Card</option><option>Net Banking</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Transaction ID (optional)</label><input id="pay-txn" class="form-control" placeholder="UPI ref / Card last 4…"/></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('payment-modal')">Cancel</button>
+      <button id="pay-save-btn" class="btn btn-success" onclick="savePayment()">✅ Record Payment</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script>
+requireAuth(['admin','staff']);
+populateSidebarUser();
+
+let allBills = [], billMeta = {};
+
+function switchTab(tab) {
+  ['bills','payments','outstanding'].forEach(t => {
+    document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+  if (tab === 'payments')    loadPayments();
+  if (tab === 'outstanding') loadOutstanding();
+}
+
+async function loadBills() {
+  const tbody = document.getElementById('bills-tbody');
+  try {
+    const res = await api.getAllBilling();
+    allBills = res.data;
+    if (!allBills.length) { tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><h3>No bills yet</h3></div></td></tr>'; return; }
+    tbody.innerHTML = allBills.map(b => `
+      <tr>
+        <td><strong>#${b.BillID}</strong></td>
+        <td>#${b.OrderID}</td>
+        <td>${b.CustomerName}</td>
+        <td>${fmt.date(b.BillDate)}</td>
+        <td class="${new Date(b.DueDate) < new Date() && b.BillStatus !== 'Paid' ? 'text-danger' : ''}">${fmt.date(b.DueDate)}</td>
+        <td><strong>${fmt.currency(b.TotalAmount)}</strong></td>
+        <td>${fmt.currency(b.TotalPaid)}</td>
+        <td>${statusBadge(b.BillStatus)}</td>
+        <td>
+          ${b.BillStatus !== 'Paid'
+            ? `<button class="btn btn-success btn-sm" onclick="openPayModal(${b.BillID},${b.TotalAmount},${b.TotalPaid})">💳 Pay</button>`
+            : '<span class="text-muted fs-sm">Settled</span>'}
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function loadPayments() {
+  const tbody = document.getElementById('payments-tbody');
+  tbody.innerHTML = '<tr><td colspan="8"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
+  try {
+    const res = await api.getPayments();
+    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><h3>No payments recorded</h3></div></td></tr>'; return; }
+    tbody.innerHTML = res.data.map(p => `
+      <tr>
+        <td><strong>#${p.PaymentID}</strong></td>
+        <td>#${p.BillID}</td>
+        <td>#${p.OrderID}</td>
+        <td>${p.CustomerName}</td>
+        <td>${fmt.date(p.PaymentDate)}</td>
+        <td><strong class="text-success">${fmt.currency(p.AmountPaid)}</strong></td>
+        <td><span class="badge badge-blue">${p.PaymentMethod}</span></td>
+        <td style="font-size:0.78rem;color:var(--text-muted)">${p.TransactionID || '—'}</td>
+      </tr>
+    `).join('');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function loadOutstanding() {
+  const tbody = document.getElementById('outstanding-tbody');
+  tbody.innerHTML = '<tr><td colspan="9"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
+  try {
+    const res = await api.reportOutstanding();
+    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-state-icon">✅</div><h3>No outstanding payments!</h3></div></td></tr>'; return; }
+    tbody.innerHTML = res.data.map(b => `
+      <tr>
+        <td><strong>#${b.BillID}</strong></td>
+        <td>#${b.OrderID}</td>
+        <td>${b.CustomerName}<br><small class="text-muted">${b.Phone}</small></td>
+        <td class="${b.AgeStatus === 'Overdue' ? 'text-danger' : ''}">${fmt.date(b.DueDate)}</td>
+        <td>${fmt.currency(b.TotalAmount)}</td>
+        <td>${fmt.currency(b.TotalPaid)}</td>
+        <td><strong class="text-warning">${fmt.currency(b.BalanceDue)}</strong></td>
+        <td>${statusBadge(b.AgeStatus)}</td>
+        <td><button class="btn btn-success btn-sm" onclick="openPayModal(${b.BillID},${b.TotalAmount},${b.TotalPaid})">💳 Pay</button></td>
+      </tr>
+    `).join('');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+function openPayModal(billID, total, paid) {
+  const balance = total - paid;
+  document.getElementById('pay-bill-id').value = billID;
+  document.getElementById('pay-bill-label').textContent = billID;
+  document.getElementById('pay-total').textContent = fmt.currency(total);
+  document.getElementById('pay-paid').textContent = fmt.currency(paid);
+  document.getElementById('pay-balance').textContent = fmt.currency(balance);
+  document.getElementById('pay-amount').value = balance.toFixed(2);
+  document.getElementById('pay-txn').value = '';
+  openModal('payment-modal');
+}
+
+async function savePayment() {
+  const body = {
+    billID: parseInt(document.getElementById('pay-bill-id').value),
+    amountPaid: parseFloat(document.getElementById('pay-amount').value),
+    paymentMethod: document.getElementById('pay-method').value,
+    transactionID: document.getElementById('pay-txn').value || null,
+  };
+  if (!body.amountPaid || body.amountPaid <= 0) { showToast('Enter a valid amount.', 'warning'); return; }
+  setLoading('pay-save-btn', true);
+  try {
+    const res = await api.createPayment(body);
+    showToast(`Payment recorded! Bill is now: ${res.newStatus}`, 'success');
+    closeModal('payment-modal');
+    loadBills();
+  } catch (err) { showToast(err.message, 'error'); }
+  setLoading('pay-save-btn', false, '✅ Record Payment');
+}
+
+loadBills();
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSMS — Feedback</title>
+  <link rel="stylesheet" href="/assets/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="sidebar">
+    <a href="/customer/dashboard.html" class="sidebar-logo"><div class="sidebar-logo-icon">🧺</div><div><div class="sidebar-logo-text">LSMS</div><div class="sidebar-logo-sub">Customer Portal</div></div></a>
+    <div class="sidebar-section-label">My Account</div>
+    <a href="/customer/dashboard.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="/customer/place-order.html" class="nav-item"><span class="nav-icon">➕</span> Place New Order</a>
+    <a href="/customer/orders.html" class="nav-item"><span class="nav-icon">📦</span> My Orders</a>
+    <a href="/customer/feedback.html" class="nav-item active"><span class="nav-icon">⭐</span> Feedback</a>
+    <div class="sidebar-footer"><div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">C</div><div><div class="sidebar-user-name" id="sidebar-user-name">Customer</div><div class="sidebar-user-role" id="sidebar-user-role">customer</div></div><button onclick="logout()" title="Logout" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">🚪</button></div></div>
+  </nav>
+  <div class="main-content">
+    <header class="topbar"><div class="topbar-title">Feedback</div></header>
+    <main class="page-content">
+      <div class="page-header"><div class="page-header-left"><h2>Feedback &amp; Reviews</h2><p>Rate your delivered orders and help us improve</p></div></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start">
+        <!-- Submit Feedback -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom:1.25rem">⭐ Submit Feedback</div>
+          <div id="feedback-orders-loading" class="loading-overlay"><div class="spinner"></div> Loading…</div>
+          <div id="feedback-form-area" class="hidden">
+            <div class="form-group">
+              <label class="form-label">Select Delivered Order</label>
+              <select id="fb-order" class="form-control">
+                <option value="">— Choose order —</option>
+              </select>
+            </div>
+            <div id="no-orders-msg" class="hidden" style="padding:1rem;background:var(--bg-card);border-radius:var(--radius-sm);font-size:0.875rem;color:var(--text-muted)">
+              No delivered orders eligible for feedback. Orders must be delivered and not already reviewed.
+            </div>
+            <div id="fb-rating-area">
+              <div class="form-group">
+                <label class="form-label">Rating</label>
+                <div class="star-rating" id="star-rating">
+                  <span class="star" data-val="1" onclick="setRating(1)">★</span>
+                  <span class="star" data-val="2" onclick="setRating(2)">★</span>
+                  <span class="star" data-val="3" onclick="setRating(3)">★</span>
+                  <span class="star" data-val="4" onclick="setRating(4)">★</span>
+                  <span class="star" data-val="5" onclick="setRating(5)">★</span>
+                </div>
+                <input type="hidden" id="fb-rating" value="0"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Comments (optional)</label>
+                <textarea id="fb-comments" class="form-control" placeholder="Tell us about your experience…"></textarea>
+              </div>
+              <button id="fb-submit-btn" class="btn btn-primary btn-full" onclick="submitFeedback()">Submit Feedback</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- My Past Feedback -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom:1.25rem">📋 My Previous Feedback</div>
+          <div id="past-feedback"><div class="loading-overlay"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script>
+if (!requireAuth(['customer'])) {}
+populateSidebarUser();
+
+let currentRating = 0;
+const params = new URLSearchParams(window.location.search);
+const preselectedOrder = params.get('order');
+
+function setRating(val) {
+  currentRating = val;
+  document.getElementById('fb-rating').value = val;
+  document.querySelectorAll('.star').forEach((s, i) => {
+    s.classList.toggle('active', i < val);
+  });
+}
+
+async function loadEligibleOrders() {
+  try {
+    // Fetch delivered orders and my existing feedback
+    const [ordersRes, feedbackRes] = await Promise.all([
+      api.getOrders({ status: 'Delivered' }),
+      api.getMyFeedback(),
+    ]);
+    const reviewedOrderIDs = new Set(feedbackRes.data.map(f => f.OrderID));
+    const eligible = ordersRes.data.filter(o => !reviewedOrderIDs.has(o.OrderID));
+
+    document.getElementById('feedback-orders-loading').classList.add('hidden');
+    document.getElementById('feedback-form-area').classList.remove('hidden');
+
+    const sel = document.getElementById('fb-order');
+    if (!eligible.length) {
+      sel.classList.add('hidden');
+      document.getElementById('no-orders-msg').classList.remove('hidden');
+      document.getElementById('fb-rating-area').classList.add('hidden');
+      return;
+    }
+    sel.innerHTML = '<option value="">— Choose order —</option>' +
+      eligible.map(o => `<option value="${o.OrderID}">#${o.OrderID} — ${fmt.date(o.OrderDate)} — ${fmt.currency(o.TotalCost)}</option>`).join('');
+
+    if (preselectedOrder) {
+      sel.value = preselectedOrder;
+    }
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function loadPastFeedback() {
+  const el = document.getElementById('past-feedback');
+  try {
+    const res = await api.getMyFeedback();
+    if (!res.data.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:1.5rem"><div class="empty-state-icon">💬</div><h3>No feedback yet</h3><p>Submit feedback after your first delivery!</p></div>';
+      return;
+    }
+    el.innerHTML = res.data.map(f => `
+      <div style="padding:1rem 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">
+          <span style="font-weight:600">Order #${f.OrderID}</span>
+          <span style="font-size:1.1rem">${'⭐'.repeat(f.Rating)}${'☆'.repeat(5-f.Rating)}</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.4rem">${fmt.date(f.FeedbackDate)} · ${fmt.currency(f.TotalCost)}</div>
+        ${f.Comments ? `<p style="font-size:0.875rem;color:var(--text-secondary);font-style:italic">"${f.Comments}"</p>` : ''}
+      </div>
+    `).join('');
+  } catch (err) { el.innerHTML = '<p class="text-muted">Failed to load feedback.</p>'; }
+}
+
+async function submitFeedback() {
+  const orderID = document.getElementById('fb-order').value;
+  const rating  = parseInt(document.getElementById('fb-rating').value);
+  const comments= document.getElementById('fb-comments').value;
+
+  if (!orderID)       { showToast('Please select an order.', 'warning'); return; }
+  if (!rating || rating < 1) { showToast('Please select a rating.', 'warning'); return; }
+
+  setLoading('fb-submit-btn', true, 'Submit Feedback');
+  try {
+    await api.submitFeedback({ orderID: parseInt(orderID), rating, comments });
+    showToast('Thank you for your feedback! 🎉', 'success');
+    setRating(0);
+    document.getElementById('fb-comments').value = '';
+    loadEligibleOrders();
+    loadPastFeedback();
+  } catch (err) { showToast(err.message, 'error'); }
+  setLoading('fb-submit-btn', false, 'Submit Feedback');
+}
+
+loadEligibleOrders();
+loadPastFeedback();
+</script>
+</body>
+</html>

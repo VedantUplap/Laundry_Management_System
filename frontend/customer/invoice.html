@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSMS — Invoice</title>
+  <link rel="stylesheet" href="/assets/css/styles.css"/>
+  <style>
+    @media print {
+      .sidebar, .topbar, .no-print { display:none !important; }
+      .main-content { margin-left:0 !important; }
+      .invoice-box { box-shadow:none; border:1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="sidebar">
+    <a href="/customer/dashboard.html" class="sidebar-logo"><div class="sidebar-logo-icon">🧺</div><div><div class="sidebar-logo-text">LSMS</div><div class="sidebar-logo-sub">Customer Portal</div></div></a>
+    <div class="sidebar-section-label">My Account</div>
+    <a href="/customer/dashboard.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="/customer/place-order.html" class="nav-item"><span class="nav-icon">➕</span> Place New Order</a>
+    <a href="/customer/orders.html" class="nav-item"><span class="nav-icon">📦</span> My Orders</a>
+    <a href="/customer/feedback.html" class="nav-item"><span class="nav-icon">⭐</span> Feedback</a>
+    <div class="sidebar-footer"><div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">C</div><div><div class="sidebar-user-name" id="sidebar-user-name">Customer</div><div class="sidebar-user-role" id="sidebar-user-role">customer</div></div><button onclick="logout()" title="Logout" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">🚪</button></div></div>
+  </nav>
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">Invoice</div>
+      <div class="topbar-actions no-print">
+        <button class="btn btn-secondary btn-sm" onclick="window.history.back()">← Back</button>
+        <button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Print</button>
+      </div>
+    </header>
+    <main class="page-content">
+      <div id="invoice-loading" class="loading-overlay"><div class="spinner"></div> Loading invoice…</div>
+      <div id="invoice-container" class="hidden" style="max-width:700px;margin:0 auto"></div>
+    </main>
+  </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script>
+if (!requireAuth(['customer','admin','staff'])) {}
+populateSidebarUser();
+
+const params  = new URLSearchParams(window.location.search);
+const orderID = params.get('order');
+
+if (!orderID) { window.location.href = '/customer/orders.html'; }
+
+async function loadInvoice() {
+  try {
+    const res = await api.getBilling(orderID);
+    const b   = res.data;
+    const totalPaid = b.payments.reduce((s, p) => s + parseFloat(p.AmountPaid), 0);
+    const balance   = parseFloat(b.TotalAmount) - totalPaid;
+
+    document.getElementById('invoice-loading').classList.add('hidden');
+    const el = document.getElementById('invoice-container');
+    el.classList.remove('hidden');
+    el.innerHTML = `
+      <div class="invoice-box">
+        <div class="invoice-header">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:1rem;opacity:0.8;margin-bottom:0.25rem">🧺 LSMS — Laundry Service Management System</div>
+              <h2>INVOICE</h2>
+              <div style="opacity:0.8;font-size:0.875rem;margin-top:0.25rem">Bill #${b.BillID}</div>
+            </div>
+            <div style="text-align:right;font-size:0.875rem;opacity:0.9">
+              <div>Bill Date: <strong>${fmt.date(b.BillDate)}</strong></div>
+              <div>Due Date: <strong>${fmt.date(b.DueDate)}</strong></div>
+              <div style="margin-top:0.5rem">${statusBadge(b.BillStatus)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="invoice-meta">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:0.875rem">
+            <div>
+              <div style="font-weight:700;margin-bottom:0.4rem;color:var(--text-muted)">BILLED TO</div>
+              <div class="fw-600">${b.CustomerName}</div>
+              <div>${b.Phone}</div>
+              <div>${b.Email}</div>
+              <div style="color:var(--text-muted);font-size:0.8rem;margin-top:0.25rem">${b.Address}</div>
+            </div>
+            <div>
+              <div style="font-weight:700;margin-bottom:0.4rem;color:var(--text-muted)">ORDER DETAILS</div>
+              <div>Order #: <strong>${b.OrderID}</strong></div>
+              <div>Order Date: ${fmt.date(b.OrderDate)}</div>
+              <div>Order Status: ${statusBadge(b.OrderStatus)}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Line items -->
+        <div style="padding:0 2rem">
+          <table style="width:100%;border-collapse:collapse;font-size:0.875rem;margin:1.25rem 0">
+            <thead>
+              <tr style="background:var(--bg-card)">
+                <th style="text-align:left;padding:0.65rem;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:0.75rem;text-transform:uppercase">Service</th>
+                <th style="text-align:left;padding:0.65rem;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:0.75rem;text-transform:uppercase">Garment</th>
+                <th style="text-align:center;padding:0.65rem;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:0.75rem;text-transform:uppercase">Qty</th>
+                <th style="text-align:right;padding:0.65rem;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:0.75rem;text-transform:uppercase">Weight</th>
+                <th style="text-align:right;padding:0.65rem;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:0.75rem;text-transform:uppercase">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${b.orderDetails.map(d => `
+                <tr>
+                  <td style="padding:0.65rem;border-bottom:1px solid var(--border)">${d.ServiceName}</td>
+                  <td style="padding:0.65rem;border-bottom:1px solid var(--border)">${d.GarmentType}</td>
+                  <td style="padding:0.65rem;border-bottom:1px solid var(--border);text-align:center">${d.Quantity}</td>
+                  <td style="padding:0.65rem;border-bottom:1px solid var(--border);text-align:right">${fmt.weight(d.WeightKg)}</td>
+                  <td style="padding:0.65rem;border-bottom:1px solid var(--border);text-align:right;font-weight:600">${fmt.currency(d.ServiceCost)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Totals -->
+        <div class="invoice-total">
+          <div>
+            <div style="font-size:0.875rem;color:rgba(255,255,255,0.7)">Total Amount</div>
+            <div>${fmt.currency(b.TotalAmount)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:0.875rem;color:rgba(255,255,255,0.7)">Amount Paid</div>
+            <div style="color:#6ee7b7">${fmt.currency(totalPaid)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:0.875rem;color:rgba(255,255,255,0.7)">Balance Due</div>
+            <div style="color:${balance > 0 ? '#fcd34d' : '#6ee7b7'}">${fmt.currency(balance)}</div>
+          </div>
+        </div>
+
+        <!-- Payment history -->
+        ${b.payments.length ? `
+        <div style="padding:1.25rem 2rem;border-top:1px solid var(--border)">
+          <div style="font-weight:600;margin-bottom:0.75rem;font-size:0.875rem">Payment History</div>
+          ${b.payments.map(p => `
+            <div style="display:flex;justify-content:space-between;font-size:0.85rem;padding:0.4rem 0;border-bottom:1px solid var(--border)">
+              <span>${fmt.date(p.PaymentDate)} · <span class="badge badge-blue">${p.PaymentMethod}</span></span>
+              <span>${p.TransactionID ? `<span style="color:var(--text-muted)">${p.TransactionID}</span>` : ''}</span>
+              <strong class="text-success">${fmt.currency(p.AmountPaid)}</strong>
+            </div>
+          `).join('')}
+        </div>` : ''}
+
+        <div style="padding:1.25rem 2rem;text-align:center;font-size:0.8rem;color:var(--text-muted);border-top:1px solid var(--border)">
+          Thank you for choosing LSMS! · For queries contact: support@lsms.com
+        </div>
+      </div>
+
+      ${balance > 0 ? `
+      <div style="text-align:center;margin-top:1.5rem" class="no-print">
+        <button class="btn btn-success btn-lg" onclick="window.location.href='/customer/orders.html'">💳 Pay Balance — ${fmt.currency(balance)}</button>
+      </div>` : ''}
+    `;
+  } catch (err) {
+    document.getElementById('invoice-loading').innerHTML = `<div class="empty-state"><div class="empty-state-icon">🧾</div><h3>Invoice not found</h3><p>No billing record exists for this order yet.</p><a href="/customer/orders.html" class="btn btn-secondary" style="margin-top:1rem">← Back to Orders</a></div>`;
+  }
+}
+
+loadInvoice();
+</script>
+</body>
+</html>

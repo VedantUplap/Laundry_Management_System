@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSMS — Reports</title>
+  <link rel="stylesheet" href="/assets/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="sidebar">
+    <a href="/admin/dashboard.html" class="sidebar-logo"><div class="sidebar-logo-icon">🧺</div><div><div class="sidebar-logo-text">LSMS</div><div class="sidebar-logo-sub">Admin Panel</div></div></a>
+    <div class="sidebar-section-label">Overview</div><a href="/admin/dashboard.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+    <div class="sidebar-section-label">Operations</div>
+    <a href="/admin/customers.html" class="nav-item"><span class="nav-icon">👥</span> Customers</a>
+    <a href="/admin/orders.html" class="nav-item"><span class="nav-icon">📦</span> Orders</a>
+    <a href="/admin/services.html" class="nav-item"><span class="nav-icon">🧼</span> Services</a>
+    <div class="sidebar-section-label">Finance</div><a href="/admin/payments.html" class="nav-item"><span class="nav-icon">💳</span> Billing &amp; Payments</a>
+    <div class="sidebar-section-label">Logistics</div>
+    <a href="/admin/inventory.html" class="nav-item"><span class="nav-icon">🗃️</span> Inventory</a>
+    <a href="/admin/delivery.html" class="nav-item"><span class="nav-icon">🚚</span> Delivery</a>
+    <div class="sidebar-section-label">Insights</div><a href="/admin/reports.html" class="nav-item active"><span class="nav-icon">📈</span> Reports</a>
+    <div class="sidebar-footer"><div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">A</div><div><div class="sidebar-user-name" id="sidebar-user-name">Admin</div><div class="sidebar-user-role" id="sidebar-user-role">admin</div></div><button onclick="logout()" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">🚪</button></div></div>
+  </nav>
+  <div class="main-content">
+    <header class="topbar"><div class="topbar-title">Reports &amp; Analytics</div></header>
+    <main class="page-content">
+      <div class="page-header"><div class="page-header-left"><h2>Reports &amp; Analytics</h2><p>All data sourced live from MySQL — using SQL aggregates, GROUP BY, JOINs</p></div></div>
+
+      <div class="tabs" style="flex-wrap:wrap">
+        <button class="tab-btn active" id="tab-monthly"    onclick="switchTab('monthly')">📅 Monthly Revenue</button>
+        <button class="tab-btn" id="tab-daily"             onclick="switchTab('daily')">📆 Daily Revenue</button>
+        <button class="tab-btn" id="tab-services"          onclick="switchTab('services')">🧼 Service Popularity</button>
+        <button class="tab-btn" id="tab-inventory"         onclick="switchTab('inventory')">🗃️ Inventory Usage</button>
+        <button class="tab-btn" id="tab-pending-del"       onclick="switchTab('pending-del')">🚚 Pending Deliveries</button>
+        <button class="tab-btn" id="tab-outstanding-rep"   onclick="switchTab('outstanding-rep')">⚠️ Outstanding Payments</button>
+      </div>
+
+      <!-- Monthly Revenue -->
+      <div id="panel-monthly">
+        <div class="card">
+          <div class="card-header"><div class="card-title">📅 Monthly Revenue</div></div>
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th>Month</th><th>Transactions</th><th>Revenue</th></tr></thead>
+              <tbody id="monthly-tbody"><tr><td colspan="3"><div class="loading-overlay"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daily Revenue -->
+      <div id="panel-daily" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📆 Daily Revenue</div>
+            <div style="display:flex;gap:0.5rem;align-items:center">
+              <input type="date" id="daily-from" class="form-control" style="width:160px"/>
+              <span class="text-muted">to</span>
+              <input type="date" id="daily-to" class="form-control" style="width:160px"/>
+              <button class="btn btn-primary btn-sm" onclick="loadDaily()">Filter</button>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th>Date</th><th>Transactions</th><th>Revenue</th></tr></thead>
+              <tbody id="daily-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Service Popularity -->
+      <div id="panel-services" class="hidden">
+        <div class="card">
+          <div class="card-header"><div class="card-title">🧼 Service Popularity</div></div>
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th>Service</th><th>Price/kg</th><th>Orders</th><th>Total kg</th><th>Revenue</th></tr></thead>
+              <tbody id="services-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Usage -->
+      <div id="panel-inventory" class="hidden">
+        <div class="card">
+          <div class="card-header"><div class="card-title">🗃️ Inventory Usage Report</div></div>
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th>Item</th><th>Unit</th><th>Available</th><th>Reorder At</th><th>Times Used</th><th>Total Consumed</th></tr></thead>
+              <tbody id="inventory-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pending Deliveries -->
+      <div id="panel-pending-del" class="hidden">
+        <div class="card">
+          <div class="card-header"><div class="card-title">🚚 Pending Deliveries Report</div></div>
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th>Del #</th><th>Order #</th><th>Customer</th><th>Phone</th><th>Agent</th><th>Status</th><th>Order Date</th></tr></thead>
+              <tbody id="pending-del-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Outstanding Payments -->
+      <div id="panel-outstanding-rep" class="hidden">
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚠️ Outstanding Payments Report</div></div>
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th>Bill #</th><th>Order #</th><th>Customer</th><th>Due Date</th><th>Balance Due</th><th>Age</th></tr></thead>
+              <tbody id="outstanding-rep-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script>
+requireAuth(['admin','staff']);
+populateSidebarUser();
+
+const tabs = ['monthly','daily','services','inventory','pending-del','outstanding-rep'];
+
+function switchTab(tab) {
+  tabs.forEach(t => {
+    document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+  const loaders = { monthly:'loadMonthly', daily:'loadDaily', services:'loadServices', inventory:'loadInventoryReport', 'pending-del':'loadPendingDel', 'outstanding-rep':'loadOutstandingRep' };
+  window[loaders[tab]]();
+}
+
+async function loadMonthly() {
+  const tbody = document.getElementById('monthly-tbody');
+  try {
+    const res = await api.reportMonthlyRevenue();
+    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted" style="padding:2rem">No data.</td></tr>'; return; }
+    let total = 0;
+    tbody.innerHTML = res.data.map(r => { total += parseFloat(r.revenue); return `
+      <tr>
+        <td><strong>${r.month}</strong></td>
+        <td>${r.transactions}</td>
+        <td><strong class="text-success">${fmt.currency(r.revenue)}</strong></td>
+      </tr>`;
+    }).join('') + `<tr style="background:var(--bg-card)"><td colspan="2"><strong>Total</strong></td><td><strong class="text-success">${fmt.currency(total)}</strong></td></tr>`;
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function loadDaily() {
+  const tbody = document.getElementById('daily-tbody');
+  tbody.innerHTML = '<tr><td colspan="3"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
+  const from = document.getElementById('daily-from').value;
+  const to   = document.getElementById('daily-to').value;
+  try {
+    const res = await api.reportDailyRevenue(from && to ? { from, to } : {});
+    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted" style="padding:2rem">No data for selected range.</td></tr>'; return; }
+    tbody.innerHTML = res.data.map(r => `
+      <tr>
+        <td>${fmt.date(r.date)}</td>
+        <td>${r.transactions}</td>
+        <td><strong class="text-success">${fmt.currency(r.revenue)}</strong></td>
+      </tr>
+    `).join('');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function loadServices() {
+  const tbody = document.getElementById('services-tbody');
+  tbody.innerHTML = '<tr><td colspan="5"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
+  try {
+    const res = await api.reportPopularServices();
+    tbody.innerHTML = res.data.map((s, i) => `
+      <tr>
+        <td><strong>${i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : i === 2 ? '🥉 ' : ''}${s.ServiceName}</strong></td>
+        <td>${fmt.currency(s.PricePerKg)}/kg</td>
+        <td><strong>${s.OrderCount}</strong></td>
+        <td>${fmt.weight(s.TotalKg)}</td>
+        <td><strong class="text-success">${fmt.currency(s.TotalRevenue)}</strong></td>
+      </tr>
+    `).join('');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function loadInventoryReport() {
+  const tbody = document.getElementById('inventory-tbody');
+  tbody.innerHTML = '<tr><td colspan="6"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
+  try {
+    const res = await api.reportInventoryUsage();
+    tbody.innerHTML = res.data.map(i => `
+      <tr>
+        <td><strong>${i.ItemName}</strong></td>
+        <td>${i.Unit}</td>
+        <td class="${i.QuantityAvailable <= i.ReorderLevel ? 'text-warning' : ''}">${i.QuantityAvailable}</td>
+        <td>${i.ReorderLevel}</td>
+        <td>${i.UsageCount}</td>
+        <td>${i.TotalUsed} ${i.Unit}</td>
+      </tr>
+    `).join('');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function loadPendingDel() {
+  const tbody = document.getElementById('pending-del-tbody');
+  tbody.innerHTML = '<tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
+  try {
+    const res = await api.reportPendingDel();
+    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">✅</div><h3>No pending deliveries!</h3></div></td></tr>'; return; }
+    tbody.innerHTML = res.data.map(d => `
+      <tr>
+        <td>#${d.DeliveryID}</td>
+        <td>#${d.OrderID}</td>
+        <td><strong>${d.CustomerName}</strong></td>
+        <td>${d.Phone}</td>
+        <td>${d.AgentName || '<span class="text-muted">Unassigned</span>'}</td>
+        <td>${statusBadge(d.DeliveryStatus)}</td>
+        <td>${fmt.date(d.OrderDate)}</td>
+      </tr>
+    `).join('');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+async function loadOutstandingRep() {
+  const tbody = document.getElementById('outstanding-rep-tbody');
+  tbody.innerHTML = '<tr><td colspan="6"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
+  try {
+    const res = await api.reportOutstanding();
+    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">✅</div><h3>No outstanding payments!</h3></div></td></tr>'; return; }
+    tbody.innerHTML = res.data.map(b => `
+      <tr>
+        <td>#${b.BillID}</td>
+        <td>#${b.OrderID}</td>
+        <td><strong>${b.CustomerName}</strong><br><small class="text-muted">${b.Phone}</small></td>
+        <td class="${b.AgeStatus === 'Overdue' ? 'text-danger' : ''}">${fmt.date(b.DueDate)}</td>
+        <td><strong class="text-warning">${fmt.currency(b.BalanceDue)}</strong></td>
+        <td>${statusBadge(b.AgeStatus)}</td>
+      </tr>
+    `).join('');
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+loadMonthly();
+</script>
+</body>
+</html>

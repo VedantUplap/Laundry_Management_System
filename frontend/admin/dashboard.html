@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSMS — Admin Dashboard</title>
+  <link rel="stylesheet" href="/assets/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <a href="/admin/dashboard.html" class="sidebar-logo">
+      <div class="sidebar-logo-icon">🧺</div>
+      <div><div class="sidebar-logo-text">LSMS</div><div class="sidebar-logo-sub">Admin Panel</div></div>
+    </a>
+
+    <div class="sidebar-section-label">Overview</div>
+    <a href="/admin/dashboard.html" class="nav-item active" id="nav-dashboard">
+      <span class="nav-icon">📊</span> Dashboard
+    </a>
+
+    <div class="sidebar-section-label">Operations</div>
+    <a href="/admin/customers.html" class="nav-item" id="nav-customers">
+      <span class="nav-icon">👥</span> Customers
+    </a>
+    <a href="/admin/orders.html" class="nav-item" id="nav-orders">
+      <span class="nav-icon">📦</span> Orders
+    </a>
+    <a href="/admin/services.html" class="nav-item" id="nav-services">
+      <span class="nav-icon">🧼</span> Services
+    </a>
+
+    <div class="sidebar-section-label">Finance</div>
+    <a href="/admin/payments.html" class="nav-item" id="nav-payments">
+      <span class="nav-icon">💳</span> Billing &amp; Payments
+    </a>
+
+    <div class="sidebar-section-label">Logistics</div>
+    <a href="/admin/inventory.html" class="nav-item" id="nav-inventory">
+      <span class="nav-icon">🗃️</span> Inventory
+    </a>
+    <a href="/admin/delivery.html" class="nav-item" id="nav-delivery">
+      <span class="nav-icon">🚚</span> Delivery
+    </a>
+
+    <div class="sidebar-section-label">Insights</div>
+    <a href="/admin/reports.html" class="nav-item" id="nav-reports">
+      <span class="nav-icon">📈</span> Reports
+    </a>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">A</div>
+        <div>
+          <div class="sidebar-user-name" id="sidebar-user-name">Admin</div>
+          <div class="sidebar-user-role" id="sidebar-user-role">admin</div>
+        </div>
+        <button onclick="logout()" title="Logout" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">🚪</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">Dashboard</div>
+      <div class="topbar-actions">
+        <span id="current-date" style="font-size:0.8rem;color:var(--text-muted)"></span>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h2>Dashboard Overview</h2>
+          <p>Real-time statistics from MySQL database</p>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="loading-overlay"><div class="spinner"></div> Loading stats…</div>
+      </div>
+
+      <!-- Charts Row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📈 Monthly Revenue</div>
+          </div>
+          <div id="monthly-chart" style="height:200px;display:flex;align-items:flex-end;gap:6px;padding:0.5rem 0"></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🧼 Popular Services</div>
+          </div>
+          <div id="services-chart"></div>
+        </div>
+      </div>
+
+      <!-- Recent Orders + Low Stock -->
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:1.25rem">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📦 Recent Orders</div>
+            <a href="/admin/orders.html" class="btn btn-secondary btn-sm">View All</a>
+          </div>
+          <div class="table-wrapper">
+            <table class="table" id="recent-orders-table">
+              <thead><tr><th>Order ID</th><th>Customer</th><th>Date</th><th>Status</th><th>Amount</th></tr></thead>
+              <tbody><tr><td colspan="5"><div class="loading-overlay"><div class="spinner"></div></div></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">⚠️ Low Stock Items</div>
+            <a href="/admin/inventory.html" class="btn btn-secondary btn-sm">Manage</a>
+          </div>
+          <div id="low-stock-list"><div class="loading-overlay"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script>
+if (!requireAuth(['admin','staff'])) {}
+
+populateSidebarUser();
+document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+async function loadDashboard() {
+  try {
+    const [statsRes, ordersRes, inventoryRes, monthlyRes, servicesRes] = await Promise.all([
+      api.getDashboardStats(),
+      api.getOrders({ }),
+      api.getInventory(),
+      api.reportMonthlyRevenue(),
+      api.reportPopularServices(),
+    ]);
+
+    renderStats(statsRes.data);
+    renderRecentOrders(ordersRes.data.slice(0, 8));
+    renderLowStock(inventoryRes.data.filter(i => i.StockStatus !== 'In Stock'));
+    renderMonthlyChart(monthlyRes.data.slice(0, 6).reverse());
+    renderServicesChart(servicesRes.data.slice(0, 5));
+  } catch (err) {
+    showToast('Failed to load dashboard: ' + err.message, 'error');
+  }
+}
+
+function renderStats(d) {
+  const grid = document.getElementById('stats-grid');
+  grid.innerHTML = `
+    <div class="stat-card"><div class="stat-icon purple">👥</div><div><div class="stat-label">Total Customers</div><div class="stat-value">${d.totalCustomers}</div></div></div>
+    <div class="stat-card"><div class="stat-icon blue">📦</div><div><div class="stat-label">Total Orders</div><div class="stat-value">${d.totalOrders}</div></div></div>
+    <div class="stat-card"><div class="stat-icon yellow">⏳</div><div><div class="stat-label">Pending Orders</div><div class="stat-value">${d.pendingOrders}</div></div></div>
+    <div class="stat-card"><div class="stat-icon purple">⚙️</div><div><div class="stat-label">Processing</div><div class="stat-value">${d.processingOrders}</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-label">Delivered</div><div class="stat-value">${d.completedOrders}</div></div></div>
+    <div class="stat-card"><div class="stat-icon cyan">🚚</div><div><div class="stat-label">Pending Deliveries</div><div class="stat-value">${d.pendingDeliveries}</div></div></div>
+    <div class="stat-card"><div class="stat-icon green">💰</div><div><div class="stat-label">Total Revenue</div><div class="stat-value" style="font-size:1.3rem">${fmt.currency(d.totalRevenue)}</div></div></div>
+    <div class="stat-card"><div class="stat-icon red">⚠️</div><div><div class="stat-label">Outstanding</div><div class="stat-value" style="font-size:1.3rem">${fmt.currency(d.outstandingPayments)}</div></div></div>
+    <div class="stat-card"><div class="stat-icon yellow">📦</div><div><div class="stat-label">Low Stock Items</div><div class="stat-value">${d.lowStockItems}</div></div></div>
+    <div class="stat-card"><div class="stat-icon cyan">⭐</div><div><div class="stat-label">Avg. Rating</div><div class="stat-value">${d.averageRating || '—'}</div><div class="stat-sub">★ out of 5</div></div></div>
+  `;
+}
+
+function renderRecentOrders(orders) {
+  const tbody = document.querySelector('#recent-orders-table tbody');
+  if (!orders.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>No orders yet.</p></div></td></tr>'; return; }
+  tbody.innerHTML = orders.map(o => `
+    <tr>
+      <td><strong>#${o.OrderID}</strong></td>
+      <td>${o.CustomerName}</td>
+      <td>${fmt.date(o.OrderDate)}</td>
+      <td>${statusBadge(o.Status)}</td>
+      <td>${fmt.currency(o.TotalCost)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderLowStock(items) {
+  const el = document.getElementById('low-stock-list');
+  if (!items.length) { el.innerHTML = '<div class="empty-state" style="padding:1.5rem"><p>All items are sufficiently stocked. ✅</p></div>'; return; }
+  el.innerHTML = items.map(i => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;font-size:0.875rem">${i.ItemName}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted)">${i.QuantityAvailable} ${i.Unit} remaining</div>
+      </div>
+      ${statusBadge(i.StockStatus)}
+    </div>
+  `).join('');
+}
+
+function renderMonthlyChart(data) {
+  const el = document.getElementById('monthly-chart');
+  if (!data.length) { el.innerHTML = '<p class="text-muted" style="align-self:center">No data yet.</p>'; return; }
+  const max = Math.max(...data.map(d => d.revenue));
+  el.innerHTML = data.map(d => {
+    const h = max ? Math.round((d.revenue / max) * 160) : 4;
+    return `
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <span style="font-size:0.65rem;color:var(--text-muted)">${fmt.currency(d.revenue)}</span>
+        <div style="width:100%;height:${h}px;background:linear-gradient(to top,var(--primary),var(--primary-light));border-radius:4px 4px 0 0;min-height:4px"></div>
+        <span style="font-size:0.65rem;color:var(--text-muted)">${d.month}</span>
+      </div>`;
+  }).join('');
+}
+
+function renderServicesChart(data) {
+  const el = document.getElementById('services-chart');
+  if (!data.length) { el.innerHTML = '<p class="text-muted">No data.</p>'; return; }
+  const max = Math.max(...data.map(d => d.OrderCount)) || 1;
+  el.innerHTML = data.map(d => `
+    <div style="margin-bottom:0.75rem">
+      <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem">
+        <span>${d.ServiceName}</span><span style="color:var(--text-muted)">${d.OrderCount} orders</span>
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${(d.OrderCount/max)*100}%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:99px;transition:width 0.5s ease"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+loadDashboard();
+</script>
+</body>
+</html>

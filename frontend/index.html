@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSMS — Login | Laundry Service Management System</title>
+  <meta name="description" content="Sign in to the Laundry Service Management System"/>
+  <link rel="stylesheet" href="/assets/css/styles.css"/>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🧺</div>
+      <div>
+        <h1>LSMS</h1>
+        <span>Laundry Service Management System</span>
+      </div>
+    </div>
+
+    <h2 class="auth-title">Welcome back</h2>
+    <p class="auth-subtitle">Sign in to your account to continue</p>
+
+    <form id="login-form" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input id="email" type="email" class="form-control" placeholder="you@example.com" required autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input id="password" type="password" class="form-control" placeholder="••••••••" required autocomplete="current-password"/>
+      </div>
+
+      <div id="login-error" class="form-error hidden" style="margin-bottom:1rem;"></div>
+
+      <button id="login-btn" type="submit" class="btn btn-primary btn-full btn-lg">
+        Sign In
+      </button>
+    </form>
+
+    <p style="text-align:center;margin-top:1.5rem;font-size:0.875rem;color:var(--text-muted)">
+      New customer?
+      <a href="/register.html" style="color:var(--primary-light);font-weight:600">Create an account</a>
+    </p>
+
+    <!-- Demo credentials -->
+    <div style="margin-top:2rem;padding:1rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm)">
+      <p style="font-size:0.75rem;color:var(--text-muted);font-weight:600;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em">Demo Credentials</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
+        <button class="btn btn-secondary btn-sm" onclick="fillDemo('admin@lsms.com')">👑 Admin</button>
+        <button class="btn btn-secondary btn-sm" onclick="fillDemo('priya@lsms.com')">👷 Staff</button>
+        <button class="btn btn-secondary btn-sm" onclick="fillDemo('aarav.sharma@gmail.com')">👤 Customer</button>
+        <button class="btn btn-secondary btn-sm" onclick="fillDemo('raj.driver@lsms.com')">🚗 Driver</button>
+      </div>
+      <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem">All passwords: <code style="color:var(--primary-light)">password</code></p>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script>
+  // Redirect if already logged in
+  if (Auth.isLoggedIn()) {
+    const u = Auth.getUser();
+    window.location.href = u && (u.role === 'admin' || u.role === 'staff') ? '/admin/dashboard.html' : '/customer/dashboard.html';
+  }
+
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('login-error');
+    errEl.classList.add('hidden');
+    setLoading('login-btn', true, 'Sign In');
+
+    try {
+      const data = await api.login({
+        email:    document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value,
+      });
+      Auth.setSession(data.token, data.user);
+      const role = data.user.role;
+      if (role === 'admin' || role === 'staff') {
+        window.location.href = '/admin/dashboard.html';
+      } else if (role === 'driver') {
+        window.location.href = '/admin/delivery.html';
+      } else {
+        window.location.href = '/customer/dashboard.html';
+      }
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.remove('hidden');
+      setLoading('login-btn', false, 'Sign In');
+    }
+  });
+
+  function fillDemo(email) {
+    document.getElementById('email').value = email;
+    document.getElementById('password').value = 'password';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSMS — My Orders</title>
+  <link rel="stylesheet" href="/assets/css/styles.css"/>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="sidebar">
+    <a href="/customer/dashboard.html" class="sidebar-logo"><div class="sidebar-logo-icon">🧺</div><div><div class="sidebar-logo-text">LSMS</div><div class="sidebar-logo-sub">Customer Portal</div></div></a>
+    <div class="sidebar-section-label">My Account</div>
+    <a href="/customer/dashboard.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+    <a href="/customer/place-order.html" class="nav-item"><span class="nav-icon">➕</span> Place New Order</a>
+    <a href="/customer/orders.html" class="nav-item active"><span class="nav-icon">📦</span> My Orders</a>
+    <a href="/customer/feedback.html" class="nav-item"><span class="nav-icon">⭐</span> Feedback</a>
+    <div class="sidebar-footer"><div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">C</div><div><div class="sidebar-user-name" id="sidebar-user-name">Customer</div><div class="sidebar-user-role" id="sidebar-user-role">customer</div></div><button onclick="logout()" title="Logout" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">🚪</button></div></div>
+  </nav>
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">My Orders</div>
+      <div class="topbar-actions"><a href="/customer/place-order.html" class="btn btn-primary btn-sm">+ New Order</a></div>
+    </header>
+    <main class="page-content">
+      <div class="page-header"><div class="page-header-left"><h2>My Orders</h2><p>Track status and view invoices for all your orders</p></div></div>
+
+      <div class="filter-bar">
+        <select id="status-filter" class="form-control" style="width:200px">
+          <option value="">All Statuses</option>
+          <option>Pending</option><option>Picked Up</option><option>Processing</option>
+          <option>Washing</option><option>Drying</option><option>Ironing</option>
+          <option>Packed</option><option>Ready for Delivery</option><option>Out for Delivery</option>
+          <option>Delivered</option><option>Cancelled</option>
+        </select>
+      </div>
+
+      <div id="orders-container"><div class="loading-overlay"><div class="spinner"></div> Loading your orders…</div></div>
+    </main>
+  </div>
+</div>
+
+<!-- Order Detail / Invoice Modal -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header"><div class="modal-title" id="detail-title">Order Details</div><button class="modal-close" onclick="closeModal('detail-modal')">✕</button></div>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<!-- Pay Modal -->
+<div class="modal-overlay" id="pay-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><div class="modal-title">Pay Bill #<span id="pay-bill-id-label"></span></div><button class="modal-close" onclick="closeModal('pay-modal')">✕</button></div>
+    <input type="hidden" id="pay-bill-id"/>
+    <div style="margin-bottom:1rem;padding:1rem;background:var(--bg-card);border-radius:var(--radius-sm)">
+      <div style="display:flex;justify-content:space-between;font-size:0.875rem">
+        <span class="text-muted">Balance Due:</span>
+        <strong id="pay-balance" class="text-warning"></strong>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Amount (₹)</label><input id="pay-amount" type="number" min="0.01" step="0.01" class="form-control"/></div>
+    <div class="form-group">
+      <label class="form-label">Payment Method</label>
+      <select id="pay-method" class="form-control"><option>Cash</option><option>UPI</option><option>Card</option><option>Net Banking</option></select>
+    </div>
+    <div class="form-group"><label class="form-label">Transaction ID (UPI/Card)</label><input id="pay-txn" class="form-control" placeholder="Optional"/></div>
+    <p style="font-size:0.72rem;color:var(--text-muted);margin:0.5rem 0">🔒 This is a simulated payment for demonstration purposes.</p>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('pay-modal')">Cancel</button>
+      <button id="pay-confirm-btn" class="btn btn-success" onclick="confirmPayment()">✅ Confirm Payment</button>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script>
+if (!requireAuth(['customer'])) {}
+populateSidebarUser();
+
+let orders = [];
+
+async function loadOrders() {
+  const status = document.getElementById('status-filter').value;
+  try {
+    const res = await api.getOrders(status ? { status } : {});
+    orders = res.data;
+    renderOrders();
+  } catch (err) { showToast(err.message, 'error'); }
+}
+
+function renderOrders() {
+  const el = document.getElementById('orders-container');
+  if (!orders.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📦</div><h3>No orders found</h3><a href="/customer/place-order.html" class="btn btn-primary" style="margin-top:1rem">Place Your First Order</a></div>`;
+    return;
+  }
+
+  el.innerHTML = orders.map(o => {
+    const canCancel = ['Pending','Picked Up','Received'].includes(o.Status);
+    const isDelivered = o.Status === 'Delivered';
+    return `
+    <div class="card" style="margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem">
+        <div>
+          <div style="font-size:1.1rem;font-weight:700">Order #${o.OrderID}</div>
+          <div style="color:var(--text-muted);font-size:0.8rem;margin-top:0.2rem">${fmt.date(o.OrderDate)} · ${fmt.weight(o.TotalWeight)} · ${fmt.currency(o.TotalCost)}</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+          ${statusBadge(o.Status)}
+          ${o.BillStatus ? statusBadge(o.BillStatus) : ''}
+        </div>
+      </div>
+
+      <!-- Status progress bar -->
+      <div style="margin:1rem 0">
+        ${renderProgressBar(o.Status)}
+      </div>
+
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="viewDetail(${o.OrderID})">👁️ View Details</button>
+        ${o.BillID ? `<button class="btn btn-info btn-sm" onclick="viewInvoice(${o.OrderID})">🧾 Invoice</button>` : ''}
+        ${o.BillID && o.BillStatus && o.BillStatus !== 'Paid' ? `<button class="btn btn-success btn-sm" onclick="openPayModal(${o.BillID},${o.BilledAmount},${o.BillStatus})">💳 Pay</button>` : ''}
+        ${isDelivered ? `<a href="/customer/feedback.html?order=${o.OrderID}" class="btn btn-warning btn-sm">⭐ Feedback</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const statusOrder = ['Pending','Picked Up','Received','Processing','Washing','Drying','Ironing','Packed','Ready for Delivery','Out for Delivery','Delivered'];
+function renderProgressBar(current) {
+  const idx = statusOrder.indexOf(current);
+  if (idx === -1) return '';
+  const pct = Math.round(((idx + 1) / statusOrder.length) * 100);
+  return `
+    <div style="display:flex;align-items:center;gap:0.75rem">
+      <div style="flex:1;height:6px;background:var(--border);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:99px;transition:width 0.5s"></div>
+      </div>
+      <span style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap">${current} (${pct}%)</span>
+    </div>`;
+}
+
+async function viewDetail(id) {
+  document.getElementById('detail-title').textContent = `Order #${id} Details`;
+  document.getElementById('detail-content').innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+  openModal('detail-modal');
+  try {
+    const res = await api.getOrder(id);
+    const o = res.data;
+    document.getElementById('detail-content').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;font-size:0.875rem">
+        <div><span class="text-muted">Order Date</span><div class="fw-600">${fmt.date(o.OrderDate)}</div></div>
+        <div><span class="text-muted">Status</span><div>${statusBadge(o.Status)}</div></div>
+        <div><span class="text-muted">Pickup Date</span><div class="fw-600">${fmt.date(o.PickupDate)}</div></div>
+        <div><span class="text-muted">Delivery Date</span><div class="fw-600">${fmt.date(o.DeliveryDate)}</div></div>
+        <div><span class="text-muted">Total Weight</span><div class="fw-600">${fmt.weight(o.TotalWeight)}</div></div>
+        <div><span class="text-muted">Total Cost</span><div class="fw-600 text-success">${fmt.currency(o.TotalCost)}</div></div>
+      </div>
+      ${o.Notes ? `<p style="padding:0.75rem;background:var(--bg-card);border-radius:var(--radius-sm);font-size:0.85rem;margin-bottom:1rem">📝 ${o.Notes}</p>` : ''}
+      <div class="table-wrapper">
+        <table class="table">
+          <thead><tr><th>Service</th><th>Garment</th><th>Qty</th><th>Weight</th><th>Cost</th></tr></thead>
+          <tbody>
+            ${o.details.map(d => `<tr><td>${d.ServiceName}</td><td>${d.GarmentType}</td><td>${d.Quantity}</td><td>${fmt.weight(d.WeightKg)}</td><td>${fmt.currency(d.ServiceCost)}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) { showToast(err.message, 'error'); closeModal('detail-modal'); }
+}
+
+async function viewInvoice(orderID) {
+  window.location.href = `/customer/invoice.html?order=${orderID}`;
+}
+
+function openPayModal(billID, total, status) {
+  document.getElementById('pay-bill-id').value = billID;
+  document.getElementById('pay-bill-id-label').textContent = billID;
+  document.getElementById('pay-balance').textContent = fmt.currency(total);
+  document.getElementById('pay-amount').value = parseFloat(total).toFixed(2);
+  openModal('pay-modal');
+}
+
+async function confirmPayment() {
+  const body = {
+    billID: parseInt(document.getElementById('pay-bill-id').value),
+    amountPaid: parseFloat(document.getElementById('pay-amount').value),
+    paymentMethod: document.getElementById('pay-method').value,
+    transactionID: document.getElementById('pay-txn').value || null,
+  };
+  if (!body.amountPaid || body.amountPaid <= 0) { showToast('Enter a valid amount.', 'warning'); return; }
+  setLoading('pay-confirm-btn', true);
+  try {
+    const res = await api.createPayment(body);
+    showToast(`Payment successful! Status: ${res.newStatus}`, 'success');
+    closeModal('pay-modal');
+    loadOrders();
+  } catch (err) { showToast(err.message, 'error'); }
+  setLoading('pay-confirm-btn', false, '✅ Confirm Payment');
+}
+
+document.getElementById('status-filter').addEventListener('change', loadOrders);
+loadOrders();
+</script>
+</body>
+</html>
