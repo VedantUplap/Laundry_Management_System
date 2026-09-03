@@ -10,8 +10,9 @@ app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Serve static frontend ──────────────────────────────────────────────────
+// ── Serve static frontend and documentation ────────────────────────────────
 app.use(express.static(path.join(__dirname, '../frontend')));
+app.use('/docs', express.static(path.join(__dirname, '../docs')));
 
 // ── API Routes ─────────────────────────────────────────────────────────────
 app.use('/api/auth',            require('./routes/auth.routes'));

@@ -6,6 +6,6 @@ const { authorize }   = require('../middleware/role.middleware');
 router.use(verifyToken);
 
 router.get('/',      authorize('admin','staff','driver'),   c.getAllDeliveries);
-router.put('/:id',   authorize('admin','staff'),            c.updateDelivery);
+router.put('/:id',   authorize('admin','staff','driver'),   c.updateDelivery);
 
 module.exports = router;

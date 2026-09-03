@@ -47,8 +47,8 @@
     <div style="margin-top:2rem;padding:1rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm)">
       <p style="font-size:0.75rem;color:var(--text-muted);font-weight:600;margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em">Demo Credentials</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
-        <button class="btn btn-secondary btn-sm" onclick="fillDemo('admin@lsms.com')">👑 Admin</button>
-        <button class="btn btn-secondary btn-sm" onclick="fillDemo('priya@lsms.com')">👷 Staff</button>
+        <button class="btn btn-secondary btn-sm" onclick="fillDemo('uplap.vedant@gmail.com')">👑 Admin</button>
+        <button class="btn btn-secondary btn-sm" onclick="fillDemo('jimmyuplap@gmail.com')">👷 Staff</button>
         <button class="btn btn-secondary btn-sm" onclick="fillDemo('aarav.sharma@gmail.com')">👤 Customer</button>
         <button class="btn btn-secondary btn-sm" onclick="fillDemo('raj.driver@lsms.com')">🚗 Driver</button>
       </div>
@@ -62,7 +62,13 @@
   // Redirect if already logged in
   if (Auth.isLoggedIn()) {
     const u = Auth.getUser();
-    window.location.href = u && (u.role === 'admin' || u.role === 'staff') ? '/admin/dashboard.html' : '/customer/dashboard.html';
+    if (u && (u.role === 'admin' || u.role === 'staff')) {
+      window.location.href = '/admin/dashboard.html';
+    } else if (u && u.role === 'driver') {
+      window.location.href = '/admin/delivery.html';
+    } else {
+      window.location.href = '/customer/dashboard.html';
+    }
   }
 
   document.getElementById('login-form').addEventListener('submit', async (e) => {

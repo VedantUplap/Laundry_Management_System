@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Database Normalization Report (3NF) — LSMS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --primary: #1e40af;
+      --primary-light: #3b82f6;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #cbd5e1;
+      --bg-alt: #f8fafc;
+      --code-bg: #f1f5f9;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background: #f1f5f9;
+      padding: 2rem 1rem;
+    }
+
+    .report-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 3.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border: 1px solid var(--border);
+    }
+
+    .print-btn-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 2rem;
+    }
+
+    .btn-print {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.2s;
+    }
+    .btn-print:hover { background: #1d4ed8; }
+
+    .header-block {
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .header-block h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1.2;
+    }
+
+    .header-block .meta {
+      display: flex;
+      gap: 2rem;
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      flex-wrap: wrap;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      border-left: 4px solid var(--primary-light);
+      padding-left: 0.75rem;
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p { margin-bottom: 1rem; font-size: 0.95rem; }
+
+    ul, ol {
+      margin-bottom: 1rem;
+      padding-left: 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    li { margin-bottom: 0.35rem; }
+
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    code {
+      background: var(--code-bg);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+      color: #0f172a;
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+      color: #0f172a;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.75rem;
+      font-size: 0.88rem;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: var(--primary);
+      font-weight: 700;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) { background: var(--bg-alt); }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .flowchart {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .report-container {
+        max-width: 100%;
+        box-shadow: none;
+        border: none;
+        padding: 1.5cm;
+      }
+      .print-btn-bar { display: none; }
+      h2 { page-break-after: avoid; }
+      table, pre { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="report-container">
+  <div class="print-btn-bar">
+    <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF (Cmd+P)</button>
+  </div>
+
+  <div class="header-block">
+    <h1>Database Normalization Report (3NF)</h1>
+    <div class="meta">
+      <span><strong>Project:</strong> Laundry Service Management System (LSMS)</span>
+      <span><strong>Target:</strong> Third Normal Form (3NF)</span>
+      <span><strong>Database:</strong> MySQL 8.0+</span>
+      <span><strong>Schema Tables:</strong> 12 Relational Entities</span>
+    </div>
+  </div>
+
+  <h2>1. Introduction</h2>
+  <p>
+    This report documents the rigorous mathematical database normalization process applied to the <strong>Laundry Service Management System (LSMS)</strong>. The design progresses from an <strong>Unnormalized Form (UNF)</strong> through <strong>First Normal Form (1NF)</strong>, <strong>Second Normal Form (2NF)</strong>, and reaches a fully optimized <strong>Third Normal Form (3NF)</strong>.
+  </p>
+  <p>
+    <strong>Primary Objectives:</strong>
+  </p>
+  <ul>
+    <li>Eliminate data redundancy and duplicate storage.</li>
+    <li>Prevent Insertion, Update, and Deletion Anomalies.</li>
+    <li>Enforce referential integrity and strict multi-table relationships.</li>
+    <li>Provide an immutable audit trail for historical laundry orders, services, and financial payments.</li>
+  </ul>
+
+  <div class="flowchart">
+    UNF (Flat Table) &nbsp; ──► &nbsp; 1NF (Atomic Values) &nbsp; ──► &nbsp; 2NF (No Partial FDs) &nbsp; ──► &nbsp; 3NF (No Transitive FDs)
+  </div>
+
+  <h2>2. Unnormalized Form (UNF)</h2>
+  <p>In the initial conceptual model, all business data is captured in a single flat record with repeating groups and multi-valued attributes:</p>
+  <pre>LAUNDRY_ORDER (
+  OrderID, OrderDate, PickupDate, DeliveryDate, OrderStatus,
+  CustomerID, CustomerFirstName, CustomerLastName, CustomerPhone, CustomerEmail, CustomerAddress,
+  [ServiceID, ServiceName, ServiceDescription, PricePerKg, GarmentType, Quantity, WeightKg, ServiceCost],  ← Repeating Group
+  TotalWeight, TotalCost,
+  BillID, BillDate, DueDate, BillAmount, BillStatus,
+  [PaymentID, PaymentDate, AmountPaid, PaymentMethod, TransactionID],  ← Repeating Group
+  AgentID, AgentName, AgentPhone, VehicleNumber,
+  DeliveryID, PickupTime, DeliveryTime, DeliveryStatus,
+  FeedbackID, Rating, Comments, FeedbackDate,
+  [ItemID, ItemName, Unit, QuantityUsed, QuantityAvailable, ReorderLevel]  ← Repeating Group
+)</pre>
+  <p><strong>Severe Anomalies Identified:</strong></p>
+  <ul>
+    <li><strong>Repeating Groups:</strong> An order can have multiple garments/services, multiple partial payments, and multiple inventory items consumed.</li>
+    <li><strong>Update Anomaly:</strong> Changing a customer's address or phone requires modifying every historical order record.</li>
+    <li><strong>Insertion Anomaly:</strong> A new laundry service or delivery agent cannot be added without creating a dummy order.</li>
+    <li><strong>Deletion Anomaly:</strong> Deleting an order accidentally erases the customer profile or inventory records.</li>
+  </ul>
+
+  <h2>3. First Normal Form (1NF)</h2>
+  <p><strong>Rules Applied:</strong></p>
+  <ul>
+    <li>Eliminate all repeating groups and nested tables.</li>
+    <li>Ensure all column attributes contain atomic (single-valued) items.</li>
+    <li>Define primary keys for unique record identification.</li>
+  </ul>
+
+  <pre>LAUNDRY_ORDER (OrderID PK, OrderDate, PickupDate, DeliveryDate, Status,
+               CustomerID, CustomerFirstName, CustomerLastName, CustomerPhone,
+               CustomerEmail, CustomerAddress, TotalWeight, TotalCost,
+               BillID, BillDate, DueDate, BillAmount, BillStatus,
+               AgentID, AgentName, AgentPhone, VehicleNumber,
+               DeliveryStatus, PickupTime, DeliveryTime,
+               FeedbackRating, FeedbackComments, FeedbackDate)
+
+ORDER_DETAIL (DetailID PK, OrderID, ServiceID, ServiceName, ServiceDescription,
+              PricePerKg, GarmentType, Quantity, WeightKg, ServiceCost)
+
+PAYMENT (PaymentID PK, OrderID, BillID, PaymentDate, AmountPaid,
+         PaymentMethod, TransactionID)
+
+USAGE_LOG (UsageID PK, OrderID, ItemID, ItemName, Unit,
+           QuantityUsed, QuantityAvailable, ReorderLevel, UsageDate)</pre>
+  <p><span class="badge">1NF Status: SATISFIED</span> All multi-valued fields removed; all column values are atomic.</p>
+
+  <h2>4. Second Normal Form (2NF)</h2>
+  <p><strong>Rule Applied:</strong> Remove all <strong>Partial Functional Dependencies</strong> — every non-key attribute must be fully functionally dependent on the primary key.</p>
+
+  <h3>Partial Dependencies Removed:</h3>
+  <ul>
+    <li>In <code>ORDER_DETAIL</code>: <code>{ServiceName, Description, PricePerKg}</code> depend only on <code>ServiceID</code>, not <code>DetailID</code>. <strong>Extracted to <code>SERVICE_TYPE</code></strong>.</li>
+    <li>In <code>USAGE_LOG</code>: <code>{ItemName, Unit, QuantityAvailable, ReorderLevel}</code> depend only on <code>ItemID</code>. <strong>Extracted to <code>INVENTORY</code></strong>.</li>
+    <li>In <code>LAUNDRY_ORDER</code>: Customer details depend solely on <code>CustomerID</code>; agent details depend on <code>AgentID</code>; bills depend on <code>BillID</code>. <strong>Extracted into dedicated entity tables</strong>.</li>
+  </ul>
+
+  <pre>CUSTOMER (CustomerID PK, FirstName, LastName, Phone, Email, Address)
+SERVICE_TYPE (ServiceID PK, ServiceName, Description, PricePerKg)
+INVENTORY (ItemID PK, ItemName, Unit, QuantityAvailable, ReorderLevel, CostPerUnit)
+DELIVERY_AGENT (AgentID PK, AgentName, Phone, VehicleNumber)
+BILLING (BillID PK, OrderID FK, BillDate, DueDate, TotalAmount, BillStatus)
+ORDERS (OrderID PK, CustomerID FK, OrderDate, PickupDate, DeliveryDate, Status, TotalWeight, TotalCost)
+ORDER_DETAILS (DetailID PK, OrderID FK, ServiceID FK, GarmentType, Quantity, WeightKg, ServiceCost)
+PAYMENT (PaymentID PK, BillID FK, PaymentDate, AmountPaid, PaymentMethod, TransactionID)
+USAGE_LOG (UsageID PK, OrderID FK, ItemID FK, QuantityUsed, UsageDate)
+DELIVERY (DeliveryID PK, OrderID FK, AgentID FK, PickupTime, DeliveryTime, DeliveryStatus)
+FEEDBACK (FeedbackID PK, CustomerID FK, OrderID FK, Rating, Comments, FeedbackDate)</pre>
+  <p><span class="badge">2NF Status: SATISFIED</span> No partial dependencies exist.</p>
+
+  <h2>5. Third Normal Form (3NF)</h2>
+  <p><strong>Rule Applied:</strong> Remove all <strong>Transitive Functional Dependencies</strong> — non-key attributes must not depend on other non-key attributes ($X \rightarrow Y$ where neither is a key).</p>
+
+  <h3>Transitive Dependencies Resolved:</h3>
+  <ul>
+    <li>
+      <strong>Authentication vs. Domain Separation:</strong> In the <code>CUSTOMER</code> and <code>DELIVERY_AGENT</code> tables, storing <code>Password</code> and <code>Role</code> creates a transitive dependency on <code>Email</code>.
+      <br><strong>Resolution:</strong> Created the independent <code>USERS(UserID PK, Username, Email, Password, Role)</code> entity. <code>CUSTOMER</code> and <code>DELIVERY_AGENT</code> simply reference <code>UserID FK</code>.
+    </li>
+    <li>
+      <strong>Historical Cost Immutability:</strong> In <code>ORDER_DETAILS</code>, <code>ServiceCost</code> is calculated as $\text{WeightKg} \times \text{PricePerKg}$ at order placement time and stored to protect against future price modifications in <code>SERVICE_TYPE</code>.
+    </li>
+  </ul>
+
+  <pre>-- Final 3NF Normalized Entities:
+USERS (UserID PK, Username UNIQUE, Email UNIQUE, Password, Role, IsActive)
+CUSTOMER (CustomerID PK, UserID FK→USERS, FirstName, LastName, Phone, Address)
+SERVICE_TYPE (ServiceID PK, ServiceName UNIQUE, Description, PricePerKg, IsActive)
+ORDERS (OrderID PK, CustomerID FK→CUSTOMER, OrderDate, PickupDate, DeliveryDate, Status, TotalWeight, TotalCost, Notes)
+ORDER_DETAILS (DetailID PK, OrderID FK→ORDERS, ServiceID FK→SERVICE_TYPE, GarmentType, Quantity, WeightKg, ServiceCost)
+BILLING (BillID PK, OrderID FK→ORDERS UNIQUE, BillDate, DueDate, TotalAmount, BillStatus)
+PAYMENT (PaymentID PK, BillID FK→BILLING, PaymentDate, AmountPaid, PaymentMethod, TransactionID)
+INVENTORY (ItemID PK, ItemName UNIQUE, Unit, QuantityAvailable, ReorderLevel, CostPerUnit)
+USAGE_LOG (UsageID PK, OrderID FK→ORDERS, ItemID FK→INVENTORY, QuantityUsed, UsageDate)
+DELIVERY_AGENT (AgentID PK, UserID FK→USERS, AgentName, Phone, VehicleNumber, IsActive)
+DELIVERY (DeliveryID PK, OrderID FK→ORDERS UNIQUE, AgentID FK→DELIVERY_AGENT, PickupTime, DeliveryTime, DeliveryStatus)
+FEEDBACK (FeedbackID PK, CustomerID FK→CUSTOMER, OrderID FK→ORDERS UNIQUE, Rating CHECK(1-5), Comments, FeedbackDate)</pre>
+  <p><span class="badge">3NF Status: SATISFIED</span> All non-key attributes depend solely and directly on the primary key.</p>
+
+  <h2>6. Final 12 Normalized Relations Matrix</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Table Name</th>
+        <th>Primary Key</th>
+        <th>Foreign Key(s)</th>
+        <th>Cardinality &amp; Referential Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>USERS</code></td>
+        <td><code>UserID</code></td>
+        <td>—</td>
+        <td>Central authentication store</td>
+      </tr>
+      <tr>
+        <td><code>CUSTOMER</code></td>
+        <td><code>CustomerID</code></td>
+        <td><code>UserID → USERS</code></td>
+        <td>1:1 with USERS (ON UPDATE CASCADE / ON DELETE RESTRICT)</td>
+      </tr>
+      <tr>
+        <td><code>SERVICE_TYPE</code></td>
+        <td><code>ServiceID</code></td>
+        <td>—</td>
+        <td>Master pricing catalog</td>
+      </tr>
+      <tr>
+        <td><code>ORDERS</code></td>
+        <td><code>OrderID</code></td>
+        <td><code>CustomerID → CUSTOMER</code></td>
+        <td>1:N with CUSTOMER (ON UPDATE CASCADE / ON DELETE RESTRICT)</td>
+      </tr>
+      <tr>
+        <td><code>ORDER_DETAILS</code></td>
+        <td><code>DetailID</code></td>
+        <td><code>OrderID → ORDERS</code><br><code>ServiceID → SERVICE_TYPE</code></td>
+        <td>1:N Line Items (ON DELETE CASCADE with ORDERS)</td>
+      </tr>
+      <tr>
+        <td><code>BILLING</code></td>
+        <td><code>BillID</code></td>
+        <td><code>OrderID → ORDERS</code> (UNIQUE)</td>
+        <td>1:1 with ORDERS (ON UPDATE CASCADE / ON DELETE RESTRICT)</td>
+      </tr>
+      <tr>
+        <td><code>PAYMENT</code></td>
+        <td><code>PaymentID</code></td>
+        <td><code>BillID → BILLING</code></td>
+        <td>1:N (Multiple/Partial payments per bill)</td>
+      </tr>
+      <tr>
+        <td><code>INVENTORY</code></td>
+        <td><code>ItemID</code></td>
+        <td>—</td>
+        <td>Stock master</td>
+      </tr>
+      <tr>
+        <td><code>USAGE_LOG</code></td>
+        <td><code>UsageID</code></td>
+        <td><code>OrderID → ORDERS</code><br><code>ItemID → INVENTORY</code></td>
+        <td>M:N associative log for chemical consumption</td>
+      </tr>
+      <tr>
+        <td><code>DELIVERY_AGENT</code></td>
+        <td><code>AgentID</code></td>
+        <td><code>UserID → USERS</code></td>
+        <td>Delivery personnel directory (ON DELETE SET NULL)</td>
+      </tr>
+      <tr>
+        <td><code>DELIVERY</code></td>
+        <td><code>DeliveryID</code></td>
+        <td><code>OrderID → ORDERS</code> (UNIQUE)<br><code>AgentID → DELIVERY_AGENT</code></td>
+        <td>1:1 with ORDERS logistics (ON DELETE SET NULL for Agent)</td>
+      </tr>
+      <tr>
+        <td><code>FEEDBACK</code></td>
+        <td><code>FeedbackID</code></td>
+        <td><code>CustomerID → CUSTOMER</code><br><code>OrderID → ORDERS</code> (UNIQUE)</td>
+        <td>1:1 with ORDERS verified review</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>7. Functional Dependencies (FD Set)</h2>
+  <ul>
+    <li><code>USERS</code>: <code>UserID → {Username, Email, Password, Role, IsActive}</code></li>
+    <li><code>CUSTOMER</code>: <code>CustomerID → {UserID, FirstName, LastName, Phone, Address}</code></li>
+    <li><code>SERVICE_TYPE</code>: <code>ServiceID → {ServiceName, Description, PricePerKg, IsActive}</code></li>
+    <li><code>ORDERS</code>: <code>OrderID → {CustomerID, OrderDate, PickupDate, DeliveryDate, Status, TotalWeight, TotalCost, Notes}</code></li>
+    <li><code>ORDER_DETAILS</code>: <code>DetailID → {OrderID, ServiceID, GarmentType, Quantity, WeightKg, ServiceCost}</code></li>
+    <li><code>BILLING</code>: <code>BillID → {OrderID, BillDate, DueDate, TotalAmount, BillStatus}</code> and <code>OrderID → BillID</code></li>
+    <li><code>PAYMENT</code>: <code>PaymentID → {BillID, PaymentDate, AmountPaid, PaymentMethod, TransactionID}</code></li>
+    <li><code>INVENTORY</code>: <code>ItemID → {ItemName, Unit, QuantityAvailable, ReorderLevel, CostPerUnit}</code></li>
+    <li><code>USAGE_LOG</code>: <code>UsageID → {OrderID, ItemID, QuantityUsed, UsageDate}</code></li>
+    <li><code>DELIVERY_AGENT</code>: <code>AgentID → {UserID, AgentName, Phone, VehicleNumber, IsActive}</code></li>
+    <li><code>DELIVERY</code>: <code>DeliveryID → {OrderID, AgentID, PickupTime, DeliveryTime, DeliveryStatus}</code> and <code>OrderID → DeliveryID</code></li>
+    <li><code>FEEDBACK</code>: <code>FeedbackID → {CustomerID, OrderID, Rating, Comments, FeedbackDate}</code> and <code>OrderID → FeedbackID</code></li>
+  </ul>
+
+  <h2>8. Database Triggers &amp; Views (Derived Redundancy Elimination)</h2>
+  <p>To maintain 3NF while providing instantaneous reporting performance:</p>
+  <ul>
+    <li>
+      <strong>Automatic Order Recalculation Triggers:</strong>
+      <code>trg_recalculate_order_after_insert/update/delete</code> automatically updates <code>ORDERS.TotalWeight</code> and <code>ORDERS.TotalCost</code> whenever order line items change.
+    </li>
+    <li>
+      <strong>Inventory Consumption Trigger:</strong>
+      <code>trg_reduce_inventory_after_usage</code> automatically subtracts stock from <code>INVENTORY</code> when a usage record is logged.
+    </li>
+    <li>
+      <strong>6 Analytical Views:</strong>
+      <code>customer_order_history</code>, <code>pending_deliveries</code>, <code>outstanding_payments</code>, <code>inventory_status</code>, <code>service_popularity</code>, and <code>daily_revenue</code> execute clean multi-table JOINs without denormalizing base tables.
+    </li>
+  </ul>
+
+  <h2>9. Conclusion</h2>
+  <p>
+    The database schema implemented in <code>database/schema.sql</code> and utilized throughout the Laundry Service Management System strictly satisfies all requirements of <strong>Third Normal Form (3NF)</strong>. It eliminates data anomalies, prevents data duplication, and guarantees complete referential and transactional integrity.
+  </p>
+</div>
+
+</body>
+</html>

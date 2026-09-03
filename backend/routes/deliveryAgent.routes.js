@@ -5,8 +5,8 @@ const { authorize }   = require('../middleware/role.middleware');
 
 router.use(verifyToken);
 
-router.get('/',      authorize('admin','staff'),     c.getAllAgents);
-router.post('/',     authorize('admin'),             c.createAgent);
-router.put('/:id',   authorize('admin','staff'),     c.updateAgent);
+router.get('/',      authorize('admin','staff','driver'),   c.getAllAgents);
+router.post('/',     authorize('admin'),                    c.createAgent);
+router.put('/:id',   authorize('admin','staff'),            c.updateAgent);
 
 module.exports = router;

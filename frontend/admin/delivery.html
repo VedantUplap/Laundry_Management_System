@@ -19,41 +19,66 @@
     <a href="/admin/inventory.html" class="nav-item"><span class="nav-icon">🗃️</span> Inventory</a>
     <a href="/admin/delivery.html" class="nav-item active"><span class="nav-icon">🚚</span> Delivery</a>
     <div class="sidebar-section-label">Insights</div><a href="/admin/reports.html" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
-    <div class="sidebar-footer"><div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">A</div><div><div class="sidebar-user-name" id="sidebar-user-name">Admin</div><div class="sidebar-user-role" id="sidebar-user-role">admin</div></div><button onclick="logout()" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">🚪</button></div></div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">A</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-user-name">Admin</div>
+          <div class="sidebar-user-role" id="sidebar-user-role">admin</div>
+        </div>
+      </div>
+      <button class="btn-switch-account" onclick="logout()" title="Switch Account / Sign Out">
+        <span>🔄</span> Switch Account
+      </button>
+    </div>
   </nav>
   <div class="main-content">
     <header class="topbar">
-      <div class="topbar-title">Delivery Management</div>
-      <div class="topbar-actions"><button class="btn btn-primary btn-sm" onclick="openModal('agent-modal');resetAgentForm()">+ Add Agent</button></div>
+      <div class="topbar-title" id="page-topbar-title">Delivery Management</div>
+      <div class="topbar-actions"><button class="btn btn-primary btn-sm" id="btn-add-agent" onclick="openModal('agent-modal');resetAgentForm()">+ Add Agent</button></div>
     </header>
     <main class="page-content">
-      <div class="page-header"><div class="page-header-left"><h2>Delivery Management</h2><p>Manage delivery agents and track deliveries</p></div></div>
+      <div class="page-header"><div class="page-header-left"><h2 id="page-heading">Delivery Management</h2><p id="page-subheading">Manage delivery routes, customer addresses, and update real-time status</p></div></div>
 
-      <div class="tabs">
-        <button class="tab-btn active" id="tab-deliveries" onclick="switchTab('deliveries')">🚚 Deliveries</button>
+      <div class="tabs" id="delivery-tabs">
+        <button class="tab-btn active" id="tab-deliveries" onclick="switchTab('deliveries')">🚚 All Deliveries</button>
+        <button class="tab-btn" id="tab-my-deliveries" style="display:none" onclick="switchTab('my-deliveries')">📦 My Assigned Route</button>
         <button class="tab-btn" id="tab-agents" onclick="switchTab('agents')">👷 Agents</button>
       </div>
 
-      <!-- Deliveries -->
+      <!-- Deliveries Panel -->
       <div id="panel-deliveries">
-        <div class="filter-bar">
-          <select id="del-status-filter" class="form-control" style="width:200px">
-            <option value="">All Statuses</option>
-            <option>Pending</option><option>Assigned</option><option>Picked Up</option>
-            <option>In Transit</option><option>Delivered</option><option>Failed</option>
-          </select>
+        <div class="toolbar" style="margin-bottom:1rem">
+          <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+            <select id="del-status-filter" class="form-control" style="width:180px">
+              <option value="">All Statuses</option>
+              <option>Pending</option><option>Assigned</option><option>Picked Up</option>
+              <option>In Transit</option><option>Delivered</option><option>Failed</option>
+            </select>
+          </div>
         </div>
         <div class="card">
           <div class="table-wrapper">
             <table class="table">
-              <thead><tr><th>Del #</th><th>Order #</th><th>Customer</th><th>Agent</th><th>Pickup</th><th>Delivered</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Del #</th>
+                  <th>Order</th>
+                  <th>Customer &amp; Phone</th>
+                  <th style="min-width:200px">📍 Delivery Address</th>
+                  <th>Assigned Agent</th>
+                  <th>Pickup / Delivered</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody id="del-tbody"><tr><td colspan="8"><div class="loading-overlay"><div class="spinner"></div></div></td></tr></tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- Agents -->
+      <!-- Agents Panel -->
       <div id="panel-agents" class="hidden">
         <div class="card">
           <div class="table-wrapper">
@@ -68,13 +93,38 @@
   </div>
 </div>
 
-<!-- Update Delivery Modal -->
+<!-- View Order Details Modal -->
+<div class="modal-overlay" id="order-details-modal">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <div class="modal-title">📦 Order Details #<span id="view-order-id"></span></div>
+      <button class="modal-close" onclick="closeModal('order-details-modal')">✕</button>
+    </div>
+    <div id="order-modal-body">
+      <div class="loading-overlay"><div class="spinner"></div> Loading order details…</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('order-details-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Update Delivery Status Modal -->
 <div class="modal-overlay" id="del-modal">
-  <div class="modal" style="max-width:460px">
+  <div class="modal" style="max-width:480px">
     <div class="modal-header"><div class="modal-title">Update Delivery #<span id="del-modal-id"></span></div><button class="modal-close" onclick="closeModal('del-modal')">✕</button></div>
     <input type="hidden" id="del-id"/>
-    <div class="form-group">
-      <label class="form-label">Assign Agent</label>
+    
+    <!-- Customer Delivery Info Box -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.25rem">
+      <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:0.4rem">Customer Delivery Info</div>
+      <div id="del-modal-cust-name" style="font-weight:700;font-size:0.95rem;color:var(--text-primary)"></div>
+      <div id="del-modal-cust-phone" style="font-size:0.85rem;color:var(--primary-light);margin-top:0.2rem"></div>
+      <div id="del-modal-cust-address" style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.4rem;padding-top:0.4rem;border-top:1px dashed var(--border)"></div>
+    </div>
+
+    <div class="form-group" id="group-assign-agent">
+      <label class="form-label">Assign Driver/Agent</label>
       <select id="del-agent" class="form-control"><option value="">— No agent assigned —</option></select>
     </div>
     <div class="form-group">
@@ -86,7 +136,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('del-modal')">Cancel</button>
-      <button id="del-save-btn" class="btn btn-primary" onclick="saveDelivery()">Save</button>
+      <button id="del-save-btn" class="btn btn-primary" onclick="saveDelivery()">Save Changes</button>
     </div>
   </div>
 </div>
@@ -113,38 +163,187 @@
 requireAuth(['admin','staff','driver']);
 populateSidebarUser();
 
+const currentUser = Auth.getUser();
+const isDriver = currentUser && currentUser.role === 'driver';
+
+if (isDriver) {
+  // Hide admin-only sidebar links
+  document.querySelectorAll('.sidebar .nav-item:not(.active), .sidebar .sidebar-section-label').forEach(el => el.style.display = 'none');
+  const logoSub = document.querySelector('.sidebar-logo-sub');
+  if (logoSub) logoSub.textContent = 'Driver Portal';
+
+  // Customize heading & topbar
+  document.getElementById('page-topbar-title').textContent = 'Driver Delivery Portal';
+  document.getElementById('page-heading').textContent = 'My Deliveries & Route';
+  document.getElementById('page-subheading').textContent = 'View assigned orders, customer addresses, phone numbers, and update real-time status.';
+
+  // Hide Add Agent button & Agents tab
+  const addAgentBtn = document.getElementById('btn-add-agent');
+  if (addAgentBtn) addAgentBtn.style.display = 'none';
+  const tabAgents = document.getElementById('tab-agents');
+  if (tabAgents) tabAgents.style.display = 'none';
+
+  // Show "My Assigned Route" tab
+  const tabMy = document.getElementById('tab-my-deliveries');
+  if (tabMy) {
+    tabMy.style.display = 'inline-block';
+    tabMy.classList.add('active');
+    document.getElementById('tab-deliveries').classList.remove('active');
+  }
+
+  // Hide agent reassignment inside modal for driver
+  const groupAgent = document.getElementById('group-assign-agent');
+  if (groupAgent) groupAgent.style.display = 'none';
+}
+
+let allDeliveriesData = [];
 let agents = [];
+let activeTab = isDriver ? 'my-deliveries' : 'deliveries';
 
 function switchTab(tab) {
-  document.getElementById('panel-deliveries').classList.toggle('hidden', tab !== 'deliveries');
+  activeTab = tab;
+  document.getElementById('panel-deliveries').classList.toggle('hidden', tab === 'agents');
   document.getElementById('panel-agents').classList.toggle('hidden', tab !== 'agents');
+
   document.getElementById('tab-deliveries').classList.toggle('active', tab === 'deliveries');
+  if (document.getElementById('tab-my-deliveries')) {
+    document.getElementById('tab-my-deliveries').classList.toggle('active', tab === 'my-deliveries');
+  }
   document.getElementById('tab-agents').classList.toggle('active', tab === 'agents');
+
   if (tab === 'agents') loadAgents();
+  else renderDeliveries();
 }
 
 async function loadDeliveries() {
-  const status = document.getElementById('del-status-filter').value;
   const tbody = document.getElementById('del-tbody');
-  tbody.innerHTML = '<tr><td colspan="8"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8"><div class="loading-overlay"><div class="spinner"></div> Loading deliveries…</div></td></tr>';
   try {
-    const res = await api.getDeliveries(status ? { status } : {});
-    if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">🚚</div><h3>No deliveries found</h3></div></td></tr>'; return; }
-    tbody.innerHTML = res.data.map(d => `
-      <tr>
-        <td><strong>#${d.DeliveryID}</strong></td>
-        <td><a href="#" onclick="event.preventDefault()" style="color:var(--primary-light)">#${d.OrderID}</a></td>
-        <td>${d.CustomerName}<br><small class="text-muted">${d.CustomerPhone}</small></td>
-        <td>${d.AgentName || '<span class="text-muted">Unassigned</span>'}</td>
-        <td>${fmt.datetime(d.PickupTime)}</td>
-        <td>${fmt.datetime(d.DeliveryTime)}</td>
-        <td>${statusBadge(d.DeliveryStatus)}</td>
-        <td>
-          <button class="btn btn-icon" title="Update" onclick='openDelModal(${JSON.stringify(d)})'>✏️</button>
-        </td>
-      </tr>
-    `).join('');
-  } catch (err) { showToast(err.message, 'error'); }
+    const res = await api.getDeliveries();
+    allDeliveriesData = res.data || [];
+    renderDeliveries();
+  } catch (err) {
+    showToast('Failed to load deliveries: ' + err.message, 'error');
+  }
+}
+
+function renderDeliveries() {
+  const statusFilter = document.getElementById('del-status-filter').value;
+  const tbody = document.getElementById('del-tbody');
+
+  let list = allDeliveriesData;
+
+  // Filter for Driver's assigned route
+  if (activeTab === 'my-deliveries' && currentUser && currentUser.agentID) {
+    list = list.filter(d => d.AgentID === currentUser.agentID);
+  }
+
+  // Filter by status dropdown
+  if (statusFilter) {
+    list = list.filter(d => d.DeliveryStatus === statusFilter);
+  }
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">🚚</div><h3>No deliveries found</h3><p>There are no deliveries matching your criteria.</p></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(d => `
+    <tr>
+      <td><strong>#${d.DeliveryID}</strong></td>
+      <td>
+        <button class="btn btn-sm btn-secondary" onclick="viewOrderDetails(${d.OrderID})" title="View Order Breakdown" style="font-size:0.78rem;padding:0.25rem 0.5rem">
+          📦 #${d.OrderID}
+        </button>
+      </td>
+      <td>
+        <div style="font-weight:600;color:var(--text-primary)">${d.CustomerName}</div>
+        <a href="tel:${d.CustomerPhone}" style="font-size:0.8rem;color:var(--primary-light);display:inline-flex;align-items:center;gap:0.2rem">
+          📞 ${d.CustomerPhone}
+        </a>
+      </td>
+      <td>
+        <div style="font-size:0.85rem;line-height:1.4;color:var(--text-secondary);background:var(--bg-input);padding:0.4rem 0.6rem;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          📍 ${d.Address || '<span class="text-muted">No address provided</span>'}
+        </div>
+      </td>
+      <td>
+        ${d.AgentName ? `<div style="font-weight:500">${d.AgentName}</div><small class="text-muted">${d.VehicleNumber || ''}</small>` : '<span class="badge badge-yellow">Unassigned</span>'}
+      </td>
+      <td>
+        <div style="font-size:0.75rem;color:var(--text-muted)">Pick: ${fmt.datetime(d.PickupTime)}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted)">Drop: ${fmt.datetime(d.DeliveryTime)}</div>
+      </td>
+      <td>${statusBadge(d.DeliveryStatus)}</td>
+      <td>
+        <div style="display:flex;gap:0.4rem">
+          <button class="btn btn-icon" title="View Order Items &amp; Notes" onclick="viewOrderDetails(${d.OrderID})">📦</button>
+          <button class="btn btn-icon" title="Update Delivery Status" onclick='openDelModal(${JSON.stringify(d)})'>✏️</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function viewOrderDetails(orderId) {
+  document.getElementById('view-order-id').textContent = orderId;
+  const modalBody = document.getElementById('order-modal-body');
+  modalBody.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Loading order details…</div>';
+  openModal('order-details-modal');
+
+  try {
+    const res = await api.getOrder(orderId);
+    const order = res.data;
+    const details = order.details || [];
+
+    modalBody.innerHTML = `
+      <div style="margin-bottom:1rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem">
+          <span style="font-size:0.8rem;color:var(--text-muted)">Customer:</span>
+          <strong>${order.CustomerName}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem">
+          <span style="font-size:0.8rem;color:var(--text-muted)">Phone:</span>
+          <a href="tel:${order.Phone}" style="color:var(--primary-light)">📞 ${order.Phone}</a>
+        </div>
+        <div style="margin-top:0.4rem;padding-top:0.4rem;border-top:1px dashed var(--border)">
+          <span style="font-size:0.8rem;color:var(--text-muted)">📍 Delivery Address:</span>
+          <div style="color:var(--text-primary);font-size:0.875rem;margin-top:0.2rem">${order.Address || '—'}</div>
+        </div>
+        ${order.Notes ? `
+        <div style="margin-top:0.6rem;padding:0.5rem;background:rgba(245,158,11,0.1);border-left:3px solid var(--warning);border-radius:4px;font-size:0.8rem">
+          ⚠️ <strong>Special Instructions / Notes:</strong> ${order.Notes}
+        </div>` : ''}
+      </div>
+
+      <div style="font-weight:600;font-size:0.875rem;margin-bottom:0.5rem">Order Line Items:</div>
+      <div class="table-wrapper" style="margin-bottom:1rem">
+        <table class="table" style="font-size:0.8rem">
+          <thead>
+            <tr><th>Garment Type</th><th>Service</th><th>Qty</th><th>Weight</th><th>Cost</th></tr>
+          </thead>
+          <tbody>
+            ${details.map(item => `
+              <tr>
+                <td><strong>${item.GarmentType}</strong></td>
+                <td>${item.ServiceName}</td>
+                <td>${item.Quantity}</td>
+                <td>${item.WeightKg} kg</td>
+                <td>${fmt.currency(item.ServiceCost)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem;background:var(--bg-surface);border-radius:var(--radius-sm);border:1px solid var(--border)">
+        <span><strong>Total Weight:</strong> ${order.TotalWeight} kg</span>
+        <span style="font-size:1.1rem;font-weight:700;color:var(--primary-light)">Total: ${fmt.currency(order.TotalCost)}</span>
+      </div>
+    `;
+  } catch (err) {
+    modalBody.innerHTML = `<div class="form-error">Failed to load order: ${err.message}</div>`;
+  }
 }
 
 async function loadAgents() {
@@ -152,7 +351,7 @@ async function loadAgents() {
   tbody.innerHTML = '<tr><td colspan="6"><div class="loading-overlay"><div class="spinner"></div></div></td></tr>';
   try {
     const res = await api.getAgents();
-    agents = res.data;
+    agents = res.data || [];
     if (!agents.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><h3>No agents registered</h3></div></td></tr>'; return; }
     tbody.innerHTML = agents.map(a => `
       <tr>
@@ -169,17 +368,21 @@ async function loadAgents() {
 
 async function populateAgentSelect() {
   if (!agents.length) {
-    try { const res = await api.getAgents(); agents = res.data; } catch(e) {}
+    try { const res = await api.getAgents(); agents = res.data || []; } catch(e) {}
   }
   const sel = document.getElementById('del-agent');
-  sel.innerHTML = '<option value="">— No agent —</option>' +
+  sel.innerHTML = '<option value="">— No agent assigned —</option>' +
     agents.map(a => `<option value="${a.AgentID}">${a.AgentName} (${a.VehicleNumber || 'No vehicle'})</option>`).join('');
 }
 
 function openDelModal(d) {
   document.getElementById('del-id').value = d.DeliveryID;
   document.getElementById('del-modal-id').textContent = d.DeliveryID;
+  document.getElementById('del-modal-cust-name').textContent = d.CustomerName;
+  document.getElementById('del-modal-cust-phone').textContent = '📞 ' + (d.CustomerPhone || '—');
+  document.getElementById('del-modal-cust-address').textContent = '📍 ' + (d.Address || 'No address provided');
   document.getElementById('del-status').value = d.DeliveryStatus;
+
   populateAgentSelect().then(() => {
     if (d.AgentID) document.getElementById('del-agent').value = d.AgentID;
   });
@@ -189,17 +392,19 @@ function openDelModal(d) {
 async function saveDelivery() {
   const id = document.getElementById('del-id').value;
   const body = {
-    agentID: document.getElementById('del-agent').value || null,
     deliveryStatus: document.getElementById('del-status').value,
   };
+  if (!isDriver) {
+    body.agentID = document.getElementById('del-agent').value || null;
+  }
   setLoading('del-save-btn', true);
   try {
     await api.updateDelivery(id, body);
-    showToast('Delivery updated!', 'success');
+    showToast('Delivery status updated successfully!', 'success');
     closeModal('del-modal');
     loadDeliveries();
   } catch (err) { showToast(err.message, 'error'); }
-  setLoading('del-save-btn', false, 'Save');
+  setLoading('del-save-btn', false, 'Save Changes');
 }
 
 function resetAgentForm() {
@@ -240,7 +445,7 @@ document.getElementById('agent-form').addEventListener('submit', async (e) => {
   setLoading('agent-save-btn', false, 'Save Agent');
 });
 
-document.getElementById('del-status-filter').addEventListener('change', loadDeliveries);
+document.getElementById('del-status-filter').addEventListener('change', renderDeliveries);
 loadDeliveries();
 </script>
 </body>

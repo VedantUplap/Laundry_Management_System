@@ -19,7 +19,18 @@
     <a href="/admin/inventory.html" class="nav-item"><span class="nav-icon">🗃️</span> Inventory</a>
     <a href="/admin/delivery.html" class="nav-item"><span class="nav-icon">🚚</span> Delivery</a>
     <div class="sidebar-section-label">Insights</div><a href="/admin/reports.html" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
-    <div class="sidebar-footer"><div class="sidebar-user"><div class="sidebar-avatar" id="sidebar-avatar">A</div><div><div class="sidebar-user-name" id="sidebar-user-name">Admin</div><div class="sidebar-user-role" id="sidebar-user-role">admin</div></div><button onclick="logout()" style="margin-left:auto;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer">🚪</button></div></div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebar-avatar">A</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name" id="sidebar-user-name">Admin</div>
+          <div class="sidebar-user-role" id="sidebar-user-role">admin</div>
+        </div>
+      </div>
+      <button class="btn-switch-account" onclick="logout()" title="Switch Account / Sign Out">
+        <span>🔄</span> Switch Account
+      </button>
+    </div>
   </nav>
   <div class="main-content">
     <header class="topbar"><div class="topbar-title">Services</div><div class="topbar-actions"><button class="btn btn-primary btn-sm" onclick="openModal('service-modal');resetForm()">+ Add Service</button></div></header>

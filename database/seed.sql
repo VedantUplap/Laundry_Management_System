@@ -5,11 +5,11 @@
 USE lsms;
 
 -- =============================================================================
--- USERS (passwords are bcrypt of 'Password@123')
+-- USERS (passwords are bcrypt of 'password')
 -- =============================================================================
 INSERT INTO USERS (Username, Email, Password, Role) VALUES
-('admin',         'admin@lsms.com',         '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin'),
-('staff_priya',   'priya@lsms.com',         '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff'),
+('vedant_admin',  'uplap.vedant@gmail.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin'),
+('jimmy_staff',   'jimmyuplap@gmail.com',   '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff'),
 ('staff_rahul',   'rahul.staff@lsms.com',   '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'staff'),
 ('cust_aarav',    'aarav.sharma@gmail.com', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'customer'),
 ('cust_meera',    'meera.patel@gmail.com',  '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'customer'),

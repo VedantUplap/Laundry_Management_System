@@ -222,7 +222,11 @@ function populateSidebarUser() {
   const nameEl = document.getElementById('sidebar-user-name');
   const roleEl = document.getElementById('sidebar-user-role');
   const avatarEl = document.getElementById('sidebar-avatar');
-  if (nameEl) nameEl.textContent = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+  const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+  if (nameEl) {
+    nameEl.textContent = displayName;
+    nameEl.title = displayName;
+  }
   if (roleEl) roleEl.textContent = user.role;
   if (avatarEl) avatarEl.textContent = (user.firstName || user.email || 'U')[0].toUpperCase();
 }
