@@ -2,10 +2,6 @@
 
 A complete full-stack web application and academic DBMS project for automating commercial laundry operations.
 
-[![Java](https://img.shields.io/badge/Java-21%20LTS-orange.svg)](https://www.oracle.com/java/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-blue.svg)](https://www.mysql.com/)
-[![JDBC](https://img.shields.io/badge/JDBC-Type--4%20Driver-green.svg)](https://dev.mysql.com/doc/connector-j/en/)
-[![Architecture](https://img.shields.io/badge/Architecture-3NF%20%7C%20DAO%20%7C%20REST-purple.svg)](docs/MIGRATION_REPORT.md)
 
 ---
 
