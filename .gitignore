@@ -1,3 +1,20 @@
+# Java build output
 java-jdbc/bin/
 *.class
+*.jar.part
+
+# Node.js legacy (if any)
+node_modules/
+npm-debug.log*
+
+# Environment & credentials
+.env
+
+# OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
