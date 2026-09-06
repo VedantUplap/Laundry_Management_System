@@ -10,10 +10,6 @@ import java.sql.SQLException;
  */
 public class DBConnection {
 
-    private static final String URL = "jdbc:mysql://localhost:3306/lsms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
-    private static final String USER = "root";
-    private static final String PASSWORD = ""; // Leave blank or match your local MySQL configuration
-
     // Explicitly load the MySQL JDBC Driver class
     static {
         try {
@@ -24,12 +20,16 @@ public class DBConnection {
     }
 
     /**
-     * Obtains a new JDBC database Connection.
+     * Obtains a new JDBC database Connection using parameters from AppConfig.
      * @return Connection object
      * @throws SQLException if a database access error occurs
      */
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL, USER, PASSWORD);
+        return DriverManager.getConnection(
+            AppConfig.getJdbcUrl(),
+            AppConfig.getDbUser(),
+            AppConfig.getDbPassword()
+        );
     }
 
     /**
